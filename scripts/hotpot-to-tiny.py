@@ -13,12 +13,15 @@ the target.
 import json
 import os
 import random
+from pathlib import Path
 
 import requests
+from tqdm import tqdm
 
 # Constants
 SOURCE_URL = "http://curtis.ml.cmu.edu/datasets/hotpot/hotpot_dev_fullwiki_v1.json"
-DESTINATION_PATH = "data/tiny.json"
+SOURCE_PATH = Path("data/hotpot.json")
+DESTINATION_PATH = Path("data/tiny.json")
 SAMPLE_SIZE = 100
 
 # Ensure the data directory exists
@@ -28,7 +31,16 @@ os.makedirs(os.path.dirname(DESTINATION_PATH), exist_ok=True)
 def download_dataset(url):
     """Download the dataset from the given URL and return the JSON data."""
     response = requests.get(url)
+
+    total_size = int(response.headers.get("content-length", 0)) / (32 * 1024)
+    with tqdm(total=total_size, unit="B", unit_scale=True) as progress_bar:
+        with open(SOURCE_PATH, "wb") as file:
+            for data in response.iter_content(1024):
+                progress_bar.update(len(data))
+                file.write(data)
+
     response.raise_for_status()  # Raise an error if the download fails
+
     return response.json()
 
 
@@ -48,8 +60,15 @@ def extract_qa_pairs(data):
 
 def main():
     """Main function to download, process, and save a small subset of the dataset."""
-    print("Downloading dataset...")
-    data = download_dataset(SOURCE_URL)
+
+    # Cache the file to save bandwidth
+    if SOURCE_PATH.exists():
+        print("Reading dataset...")
+        with open(SOURCE_PATH, "r") as file:
+            data = json.load(file)
+    else:
+        print("Downloading dataset...")
+        data = download_dataset(SOURCE_URL)
 
     print("Extracting QA pairs...")
     qa_pairs = extract_qa_pairs(data)
