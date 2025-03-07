@@ -32,19 +32,19 @@ class TinyTokenizer:
 
     @property
     def pad_id(self) -> int:
-        return self.special.index(self.pad)
+        return self.chars.index(self.pad)
 
     @property
     def bos_id(self) -> int:
-        return self.special.index(self.bos)
+        return self.chars.index(self.bos)
 
     @property
     def eos_id(self) -> int:
-        return self.special.index(self.eos)
+        return self.chars.index(self.eos)
 
     @property
     def unk_id(self) -> int:
-        return self.special.index(self.unk)
+        return self.chars.index(self.unk)
 
     def encode(self, text: str, add_bos: bool = False, add_eos: bool = False) -> list[int]:
         tokens = [self.stoi.get(c, self.unk_id) for c in text]
