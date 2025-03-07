@@ -79,4 +79,5 @@ if __name__ == "__main__":
     tokenizer = TinyTokenizer()
 
     dataset = TinyDataset(tokenizer, hotpot)
-    print(dataset[0])
+    print(f'Input: {dataset[0]["input"]}')
+    print(f'Target: {dataset[0]["target"]}')
