@@ -21,19 +21,20 @@ from tqdm import tqdm
 
 
 def download_dataset(url, source_path):
-    """Download the dataset from the given URL and return the JSON data."""
-    response = requests.get(url)
+    """Download the dataset from the given URL and save it locally."""
+    response = requests.get(url, stream=True)
+    response.raise_for_status()  # Ensure we catch bad responses
 
-    total_size = int(response.headers.get("content-length", 0)) / (32 * 1024)
+    total_size = int(response.headers.get("content-length", 0))
     with tqdm(total=total_size, unit="B", unit_scale=True) as progress_bar:
         with open(source_path, "wb") as file:
             for data in response.iter_content(1024):
                 progress_bar.update(len(data))
                 file.write(data)
 
-    response.raise_for_status()  # Raise an error if the download fails
-
-    return response.json()
+    # Load and return the JSON after download
+    with open(source_path, "r", encoding="utf-8") as file:
+        return json.load(file)
 
 
 def extract_qa_pairs(data):
@@ -91,7 +92,7 @@ def main():
     # Cache the file to save bandwidth
     if source_path.exists():
         print("Reading dataset...")
-        with open(source_path, "r") as file:
+        with open(source_path, "r", encoding="utf-8") as file:
             data = json.load(file)
     else:
         print("Downloading dataset...")
@@ -99,6 +100,10 @@ def main():
 
     print("Extracting QA pairs...")
     qa_pairs = extract_qa_pairs(data)
+
+    if not qa_pairs:
+        print("Error: No valid QA pairs found in the dataset.")
+        return
 
     if len(qa_pairs) < args.samples:
         print(f"Warning: Only {len(qa_pairs)} valid QA pairs found, using all of them.")
