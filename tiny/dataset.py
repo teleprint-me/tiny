@@ -20,7 +20,7 @@ class TinyDataset(Dataset):
     def __getitem__(self, idx):
         item = self.dataset[idx]
         source = self.tokenizer.encode(item["input"])
-        target = self.tokenizer.encode(item["output"])
+        target = self.tokenizer.encode(item["target"])
         return {
             "input": torch.tensor(source, dtype=torch.long),
             "target": torch.tensor(target, dtype=torch.long),
@@ -33,8 +33,8 @@ if __name__ == "__main__":
 
     tokenizer = Tokenizer()
     dataset = [
-        {"input": "hello", "output": "world"},
-        {"input": "how are you", "output": "i am fine"},
+        {"input": "hello", "target": "world"},
+        {"input": "how are you", "target": "i am fine"},
     ]
 
     ds = TinyDataset(dataset, tokenizer)
