@@ -8,56 +8,60 @@ from string import printable
 
 
 @dataclass(frozen=True)
-class TinySpecial:
+class TinyTokenizer:
     pad: str = "<pad>"
     bos: str = "<bos>"
     eos: str = "<eos>"
     unk: str = "<unk>"
 
     @property
-    def tokens(self) -> list[str]:
+    def special(self) -> list[str]:
         return [self.pad, self.bos, self.eos, self.unk]
 
     @property
+    def chars(self) -> list[str]:
+        return self.special + list(printable)
+
+    @property
+    def stoi(self) -> dict[str, int]:
+        return {s: i for i, s in enumerate(self.chars)}
+
+    @property
+    def itos(self) -> dict[int, str]:
+        return {i: s for s, i in self.stoi.items()}
+
+    @property
     def pad_id(self) -> int:
-        return self.tokens.index(self.pad)
+        return self.special.index(self.pad)
 
     @property
     def bos_id(self) -> int:
-        return self.tokens.index(self.bos)
+        return self.special.index(self.bos)
 
     @property
     def eos_id(self) -> int:
-        return self.tokens.index(self.eos)
+        return self.special.index(self.eos)
 
     @property
     def unk_id(self) -> int:
-        return self.tokens.index(self.unk)
+        return self.special.index(self.unk)
 
-
-class TinyTokenizer:
-    def __init__(self):
-        self.special = TinySpecial()
-        self.chars = self.special.tokens + list(printable)
-        self.stoi = {s: i for i, s in enumerate(self.chars)}
-        self.itos = {i: s for s, i in self.stoi.items()}
-
-    def encode(self, text: str, add_bos: bool = False, add_eos: bool = False):
-        tokens = [self.stoi.get(c, self.stoi[self.special.unk]) for c in text]
+    def encode(self, text: str, add_bos: bool = False, add_eos: bool = False) -> list[int]:
+        tokens = [self.stoi.get(c, self.unk_id) for c in text]
         if add_bos:
-            tokens = [self.stoi[self.special.bos]] + tokens
+            tokens = [self.bos_id] + tokens
         if add_eos:
-            tokens = tokens + [self.stoi[self.special.eos]]
+            tokens = tokens + [self.eos_id]
         return tokens
 
-    def decode(self, tokens: list[int]):
+    def decode(self, tokens: list[int]) -> str:
         return "".join(self.itos[t] for t in tokens if t > 3)
 
 
 # Usage example
 if __name__ == "__main__":
     tokenizer = TinyTokenizer()
-    encoded = tokenizer.encode("Hello, world!")
+    encoded = tokenizer.encode("Hello, world!", add_bos=True, add_eos=True)
     decoded = tokenizer.decode(encoded)
     print(f"Encoded: {encoded}")
     print(f"Decoded: {decoded}")
