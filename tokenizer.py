@@ -44,7 +44,7 @@ class Tokenizer:
         self.itos = {i: s for s, i in self.stoi.items()}
 
     def encode(self, text: str):
-        tokens = [self.stoi.get(c, self.stoi[self.special.unk]) for c in text.lower()]
+        tokens = [self.stoi.get(c, self.stoi[self.special.unk]) for c in text]
         tokens = [self.stoi[self.special.bos]] + tokens + [self.stoi[self.special.eos]]
         return tokens + [self.stoi[self.special.pad]] * (self.max_seq_len - len(tokens))
 
@@ -55,5 +55,7 @@ class Tokenizer:
 # Usage example
 if __name__ == "__main__":
     tokenizer = Tokenizer()
-    print(tokenizer.encode("hello"))
-    print(tokenizer.decode(tokenizer.encode("hello")))
+    encoded = tokenizer.encode("Hello, world!")
+    decoded = tokenizer.decode(encoded)
+    print(encoded)
+    print(decoded)
