@@ -1,19 +1,59 @@
-class CharTokenizer:
-    def __init__(self):
-        self.chars = list("abcdefghijklmnopqrstuvwxyz0123456789 .,!?")
-        self.chars = ["[PAD]", "[SOS]", "[EOS]", "[UNK]"] + self.chars
+"""
+Module: tiny.tokenizer
+Description: A super simple character level tokenizer.
+"""
+
+from dataclasses import dataclass
+from string import printable
+
+
+@dataclass(frozen=True)
+class Special:
+    pad: str = "<pad>"
+    bos: str = "<bos>"
+    eos: str = "<eos>"
+    unk: str = "<unk>"
+
+    @property
+    def tokens(self) -> list[str]:
+        return [self.pad, self.bos, self.eos, self.unk]
+
+    @property
+    def pad_id(self) -> int:
+        return self.tokens.index(self.pad)
+
+    @property
+    def bos_id(self) -> int:
+        return self.tokens.index(self.bos)
+
+    @property
+    def eos_id(self) -> int:
+        return self.tokens.index(self.eos)
+
+    @property
+    def unk_id(self) -> int:
+        return self.tokens.index(self.unk)
+
+
+class Tokenizer:
+    def __init__(self, max_seq_len: int = 20):
+        self.max_seq_len = max_seq_len
+        self.special = Special()
+        self.chars = self.special.tokens + list(printable)
         self.stoi = {s: i for i, s in enumerate(self.chars)}
         self.itos = {i: s for s, i in self.stoi.items()}
 
-    def encode(self, text, max_len=20):
-        tokens = [self.stoi.get(c, self.stoi["[UNK]"]) for c in text.lower()]
-        tokens = [self.stoi["[SOS]"]] + tokens + [self.stoi["[EOS]"]]
-        return tokens + [self.stoi["[PAD]"]] * (max_len - len(tokens))
+    def encode(self, text: str):
+        tokens = [self.stoi.get(c, self.stoi[self.special.unk]) for c in text.lower()]
+        tokens = [self.stoi[self.special.bos]] + tokens + [self.stoi[self.special.eos]]
+        return tokens + [self.stoi[self.special.pad]] * (self.max_seq_len - len(tokens))
 
-    def decode(self, tokens):
+    def decode(self, tokens: list[int]):
         return "".join(self.itos[t] for t in tokens if t > 3)
 
 
-tokenizer = CharTokenizer()
-print(tokenizer.encode("hello"))
-print(tokenizer.decode(tokenizer.encode("hello")))
+# Usage example
+if __name__ == "__main__":
+    tokenizer = Tokenizer()
+    print(tokenizer.encode("hello"))
+    print(tokenizer.decode(tokenizer.encode("hello")))
