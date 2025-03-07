@@ -8,7 +8,7 @@ from string import printable
 
 
 @dataclass(frozen=True)
-class Special:
+class TinySpecial:
     pad: str = "<pad>"
     bos: str = "<bos>"
     eos: str = "<eos>"
@@ -35,10 +35,10 @@ class Special:
         return self.tokens.index(self.unk)
 
 
-class Tokenizer:
+class TinyTokenizer:
     def __init__(self, max_seq_len: int = 20):
         self.max_seq_len = max_seq_len
-        self.special = Special()
+        self.special = TinySpecial()
         self.chars = self.special.tokens + list(printable)
         self.stoi = {s: i for i, s in enumerate(self.chars)}
         self.itos = {i: s for s, i in self.stoi.items()}
@@ -54,8 +54,8 @@ class Tokenizer:
 
 # Usage example
 if __name__ == "__main__":
-    tokenizer = Tokenizer()
+    tokenizer = TinyTokenizer()
     encoded = tokenizer.encode("Hello, world!")
     decoded = tokenizer.decode(encoded)
-    print(encoded)
-    print(decoded)
+    print(f"Encoded: {encoded}")
+    print(f"Decoded: {decoded}")
