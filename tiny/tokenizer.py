@@ -36,17 +36,19 @@ class TinySpecial:
 
 
 class TinyTokenizer:
-    def __init__(self, max_seq_len: int = 20):
-        self.max_seq_len = max_seq_len
+    def __init__(self):
         self.special = TinySpecial()
         self.chars = self.special.tokens + list(printable)
         self.stoi = {s: i for i, s in enumerate(self.chars)}
         self.itos = {i: s for s, i in self.stoi.items()}
 
-    def encode(self, text: str):
+    def encode(self, text: str, add_bos: bool = False, add_eos: bool = False):
         tokens = [self.stoi.get(c, self.stoi[self.special.unk]) for c in text]
-        tokens = [self.stoi[self.special.bos]] + tokens + [self.stoi[self.special.eos]]
-        return tokens + [self.stoi[self.special.pad]] * (self.max_seq_len - len(tokens))
+        if add_bos:
+            tokens = [self.stoi[self.special.bos]] + tokens
+        if add_eos:
+            tokens = tokens + [self.stoi[self.special.eos]]
+        return tokens
 
     def decode(self, tokens: list[int]):
         return "".join(self.itos[t] for t in tokens if t > 3)
