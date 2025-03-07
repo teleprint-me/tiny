@@ -29,13 +29,19 @@ class TinyDataset(Dataset):
 
 # Example usage
 if __name__ == "__main__":
-    from tokenizer import Tokenizer
+    import json
+    import os
 
-    tokenizer = Tokenizer()
-    dataset = [
-        {"input": "hello", "target": "world"},
-        {"input": "how are you", "target": "i am fine"},
-    ]
+    if os.path.exists("data/tiny.json"):
+        with open("data/tiny.json", "r") as file:
+            hotpot = json.load(file)
+    else:
+        hotpot = [
+            {"input": "hello", "target": "world"},
+            {"input": "how are you", "target": "i am fine"},
+        ]
 
-    ds = TinyDataset(dataset, tokenizer)
-    print(ds[0])
+    tokenizer = TinyTokenizer()
+
+    dataset = TinyDataset(tokenizer, hotpot)
+    print(dataset[0])
