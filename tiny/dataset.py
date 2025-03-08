@@ -10,22 +10,28 @@ from tiny.tokenizer import TinyTokenizer
 
 
 class TinyProcessor:
-    def __init__(self, tokenizer: TinyTokenizer, dataset: list[dict[str, str]]):
+    def __init__(
+        self,
+        tokenizer: TinyTokenizer,
+        dataset: list[dict[str, str]],
+        max_seq: int = 128,
+    ):
         self.tokenizer = tokenizer
         self.dataset = dataset
-        self.max_seq = 0
+        self.max_seq = max_seq
 
     def calc_max_seq(self):
         # Calculate the longest pair
-        max_seq = 0
         for pair in self.dataset:
             # input is the beginning of the sequence
             source = tokenizer.encode(pair["input"], add_bos=True)
             # target is the predicted output which continues on from the input sequence
             target = tokenizer.encode(pair["target"], add_eos=True)
             # calculate the max length of any given sequence
-            max_seq = max(len(source) + len(target), max_seq)
-        self.max_seq = max_seq
+            self.max_seq = max(len(source) + len(target), self.max_seq)
+        # Max seq len must be evenly divisible
+        if self.max_seq % 2 != 0:
+            self.max_seq += 1  # Should probably be some power of 2, but I'm being lazy
 
     def pad(self, tokens: list[int]) -> list[int]:
         # append a sequence of pad ids to a given sequence up to its max length
@@ -45,21 +51,38 @@ class TinyProcessor:
 
 
 class TinyDataset(Dataset):
-    def __init__(self, tokenizer: TinyTokenizer, dataset: list[dict[str, str]]):
-        # preprocess the dataset
-        self.processor = TinyProcessor(tokenizer, dataset)
-        # encode and pad the dataset for training
-        self.dataset = self.processor.encode()
+    def __init__(
+        self,
+        tokenizer: TinyTokenizer,
+        dataset: list[dict[str, str]],
+        max_seq: int = 128,
+        batch_size: int = 8,
+    ):
+        self.tokenizer = tokenizer
+        processor = TinyProcessor(tokenizer, dataset, max_seq)
+        self.dataset = processor.encode()
+        self.max_seq = processor.max_seq
+        self.batch_size = batch_size
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.dataset)
 
-    def __getitem__(self, idx):
-        item = self.dataset[idx]
-        return {
-            "input": torch.tensor(item["input"], dtype=torch.long),
-            "target": torch.tensor(item["target"], dtype=torch.long),
-        }
+    def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor]:
+        pair = self.dataset[idx]
+        source = torch.tensor(pair["input"], dtype=torch.long)
+        target = torch.tensor(pair["target"], dtype=torch.long)
+        return source, target
+
+    def __iter__(self) -> tuple[torch.Tensor, torch.Tensor]:
+        for i in range(0, len(self), self.batch_size):
+            batch = self.dataset[i : i + self.batch_size]
+            shape = (len(batch), self.max_seq)
+            source = torch.full(shape, self.tokenizer.pad_id, dtype=torch.long)
+            target = torch.full(shape, self.tokenizer.pad_id, dtype=torch.long)
+            for j, pair in enumerate(batch):
+                source[j] = torch.tensor(pair["input"], dtype=torch.long)
+                target[j] = torch.tensor(pair["target"], dtype=torch.long)
+            yield (source, target)
 
 
 # Example usage
@@ -79,5 +102,7 @@ if __name__ == "__main__":
     tokenizer = TinyTokenizer()
 
     dataset = TinyDataset(tokenizer, hotpot)
-    print(f'Input: {dataset[0]["input"]}')
-    print(f'Target: {dataset[0]["target"]}')
+    x, y = dataset[0]
+    print(f"Max seq: {dataset.max_seq}")
+    print(f"Input: {x}")
+    print(f"Target: {y}")
