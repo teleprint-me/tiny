@@ -19,12 +19,16 @@ class TinyTokenizer:
         return [self.pad, self.bos, self.eos, self.unk]
 
     @property
-    def chars(self) -> list[str]:
+    def vocab(self) -> list[str]:
         return self.special + list(printable)
 
     @property
+    def vocab_size(self) -> int:
+        return len(self.vocab)
+
+    @property
     def stoi(self) -> dict[str, int]:
-        return {s: i for i, s in enumerate(self.chars)}
+        return {s: i for i, s in enumerate(self.vocab)}
 
     @property
     def itos(self) -> dict[int, str]:
@@ -32,19 +36,19 @@ class TinyTokenizer:
 
     @property
     def pad_id(self) -> int:
-        return self.chars.index(self.pad)
+        return self.vocab.index(self.pad)
 
     @property
     def bos_id(self) -> int:
-        return self.chars.index(self.bos)
+        return self.vocab.index(self.bos)
 
     @property
     def eos_id(self) -> int:
-        return self.chars.index(self.eos)
+        return self.vocab.index(self.eos)
 
     @property
     def unk_id(self) -> int:
-        return self.chars.index(self.unk)
+        return self.vocab.index(self.unk)
 
     def encode(self, text: str, add_bos: bool = False, add_eos: bool = False) -> list[int]:
         tokens = [self.stoi.get(c, self.unk_id) for c in text]
