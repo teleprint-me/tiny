@@ -14,50 +14,56 @@ import torch
 from torch import nn
 
 
-class PositionalEncoding:
+class PositionalEncoding(nn.Module):
     """Standard fixed sinusoidal positional encoding for transformer models."""
 
-    def __init__(self, d_model: int, max_seq: int, dtype: torch.dtype):
+    def __init__(self, d_model: int, max_seq: int, dtype: torch.dtype = torch.float32):
         super().__init__()
+        assert d_model % 2 == 0, "d_model must be even for sinusoidal encoding"
         self.d_model = d_model
         self.max_seq = max_seq
         self.dtype = dtype
 
         # Register precomputed positional encodings as a non-trainable buffer
-        self.register_buffer("pe", self._generate_sinusoidal_encoding())
+        pe = self._generate_sinusoidal_encoding()
+        self.register_buffer("pe", pe, persistent=False)  # Explicitly non-trainable
 
-    # ref: https://stackoverflow.com/a/77445896/20035933
     def _generate_sinusoidal_encoding(self) -> torch.Tensor:
         """Creates sinusoidal positional encodings as described in Vaswani et al. (2017)."""
-        # Create a tensor of shape (max_seq, d_model) to store the positional encodings.
-        pe = torch.zeros(self.max_seq, self.d_model)
-        # Create a tensor of shape (max_seq, 1) to store the position indices.
+        pe = torch.zeros(self.max_seq, self.d_model, dtype=self.dtype)
         position = torch.arange(0, self.max_seq, dtype=self.dtype).unsqueeze(1)
-        # Calculate the division term of shape (D/2,) to avoid division by zero.
-        d = torch.arange(0, self.d_model, 2, dtype=self.dtype)
-        t = -torch.log(torch.tensor(10000.0)) / self.d_model
-        div_term = torch.exp(d * t)
-        # Compute the positional encoding for even and odd indices separately.
-        pe[:, 0::2] = torch.sin(position * div_term)  # sin(position * (10000 ** (2i / d_model))
-        pe[:, 1::2] = torch.cos(position * div_term)  # cos(position * (10000 ** (2i / d_model))
-        return pe.unsqueeze(0)  # (1, T, D)
+        step = torch.arange(0, self.d_model, 2, dtype=self.dtype)
+        scale = -torch.log(torch.tensor(10000.0)) / self.d_model
+        div_term = torch.exp(step * scale)
+        pe[:, 0::2] = torch.sin(position * div_term)  # Apply sine to even indices
+        pe[:, 1::2] = torch.cos(position * div_term)  # Apply cosine to odd indices
+        return pe.unsqueeze(0)  # Shape: (1, T, D)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Add positional encoding to input tensor x."""
-        seq_len = x.size(1)
-        return x + self.pe[:, :seq_len, :]  # (B, T, D)
+        """Adds positional encoding to the input tensor x."""
+        return x + self.pe[:, : x.size(1), :]  # (B, T, D)
 
 
-class PositionalEmbedding:
-    def __init__(self, vocab_size: int, d_model: int, max_seq: int, dtype: torch.dtype):
+class PositionalEmbedding(nn.Module):
+    """Token + positional embedding for transformer decoder."""
+
+    def __init__(
+        self,
+        vocab_size: int,
+        d_model: int,
+        max_seq: int,
+        dtype: torch.dtype = torch.float32,
+    ):
+        super().__init__()
         self.d_model = d_model
         self.embedding = nn.Embedding(vocab_size, d_model)
         self.encoding = PositionalEncoding(d_model, max_seq, dtype)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        embeddings = self.embedding(x)
-        encodings = self.encoding(embeddings)
-        return encodings
+        # Scale by sqrt(d_model), Vaswani et al.’s embedding scaling trick
+        scale = torch.sqrt(torch.tensor(self.d_model, dtype=x.dtype))
+        embeddings = self.embedding(x) * scale
+        return self.encoding(embeddings)
 
 
 class LayerNormalization(nn.Module):
