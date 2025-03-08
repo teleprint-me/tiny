@@ -48,6 +48,18 @@ class PositionalEncoding:
         return x + self.pe[:, :seq_len, :]  # (B, T, D)
 
 
+class PositionalEmbedding:
+    def __init__(self, vocab_size: int, d_model: int, max_seq: int, dtype: torch.dtype):
+        self.d_model = d_model
+        self.embedding = nn.Embedding(vocab_size, d_model)
+        self.encoding = PositionalEncoding(d_model, max_seq, dtype)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        embeddings = self.embedding(x)
+        encodings = self.encoding(embeddings)
+        return encodings
+
+
 class LayerNormalization(nn.Module):
     def __init__(self, d_model: int, eps: float = 1e-6):
         super().__init__()
