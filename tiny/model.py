@@ -56,14 +56,14 @@ class PositionalEmbedding(nn.Module):
     ):
         super().__init__()
         self.d_model = d_model
-        self.embedding = nn.Embedding(vocab_size, d_model)
-        self.encoding = PositionalEncoding(d_model, max_seq, dtype)
+        self.tokens = nn.Embedding(vocab_size, d_model)
+        self.encodings = PositionalEncoding(d_model, max_seq, dtype)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Scale by sqrt(d_model), Vaswani et al.’s embedding scaling trick
         scale = torch.sqrt(torch.tensor(self.d_model, dtype=x.dtype))
-        embeddings = self.embedding(x) * scale
-        return self.encoding(embeddings)
+        tokens = self.tokens(x) * scale
+        return self.encodings(tokens)
 
 
 class MultiHeadSelfAttention(nn.Module):
