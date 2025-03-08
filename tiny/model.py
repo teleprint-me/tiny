@@ -1,14 +1,10 @@
 """
 Module: tiny.model
-Description: A super simple decoder-only transformer implementation for natural language processing.
+Description: This module contains a simplified decoder-only Transformer model for natural language processing.
 
----
-
-Do **not** use dropout. This is known to harm the model.
-If we use a 0.1 dropout, that means 10% of samples are randomly dropped from the propogated sequence.
-This can cause stuttering and repetition issues. I omit dropout from the implementation as a result.
-
-This will be a mix of Jamils Transformer, Karpathys GPT-2, and possibly some aspects of Metas Llama.
+This model avoids the use of dropout, which has been shown to negatively impact performance by randomly dropping
+a selected percentage of samples from the propagated sequence. This can result in stuttering and repetition issues.
+This model is inspired by Jamil's Transformer, Karpathy's GPT-2, and Meta's Llama architectures.
 """
 
 import torch
