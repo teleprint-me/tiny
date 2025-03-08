@@ -78,12 +78,12 @@ class MultiHeadSelfAttention(nn.Module):
         self.d_k = d_model // num_heads  # Per-head dimension
 
         # Linear projections for Q, K, V (each projects to d_model size)
-        self.w_q = nn.Linear(d_model, d_model)
-        self.w_k = nn.Linear(d_model, d_model)
-        self.w_v = nn.Linear(d_model, d_model)
+        self.wq = nn.Linear(d_model, d_model)
+        self.wk = nn.Linear(d_model, d_model)
+        self.wv = nn.Linear(d_model, d_model)
 
         # Final output projection
-        self.w_o = nn.Linear(d_model, d_model)
+        self.wo = nn.Linear(d_model, d_model)
 
         # Precompute causal mask
         self.register_buffer(
@@ -95,9 +95,9 @@ class MultiHeadSelfAttention(nn.Module):
         B, T, D = x.shape  # Batch, Seq Len, Embedding Dim
 
         # Project Q, K, V
-        q = self.w_q(x)
-        k = self.w_k(x)
-        v = self.w_v(x)
+        q = self.wq(x)
+        k = self.wk(x)
+        v = self.wv(x)
 
         # Reshape for multi-head attention
         q = q.view(B, T, self.num_heads, self.d_k).transpose(1, 2)  # (B, num_heads, T, d_k)
@@ -116,7 +116,7 @@ class MultiHeadSelfAttention(nn.Module):
         y = y.transpose(1, 2).contiguous().view(B, T, D)  # (B, T, D)
 
         # Final projection
-        return self.w_o(y)
+        return self.wo(y)
 
 
 class LayerNormalization(nn.Module):
