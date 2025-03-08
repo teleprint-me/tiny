@@ -78,3 +78,17 @@ class LayerNormalization(nn.Module):
         mean = x.mean(dim=-1, keepdim=True)
         var = x.var(dim=-1, unbiased=False, keepdim=True)  # More stable than std
         return self.alpha * (x - mean) / torch.sqrt(var + self.eps) + self.bias
+
+
+class FeedForward(nn.Module):
+    """Hybrid FeedForward block inspired by GPT-2 and Transformer models."""
+
+    def __init__(self, d_model: int, ff_mult: float = 4.0):
+        super().__init__()
+        hidden = int(ff_mult * d_model)  # Hidden layer size
+        self.fc1 = nn.Linear(d_model, hidden)
+        self.fc2 = nn.Linear(hidden, d_model)
+        self.act = nn.GELU(approximate="tanh")  # GPT-2 uses GELU
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.fc2(self.act(self.fc1(x)))
