@@ -7,8 +7,11 @@ a selected percentage of samples from the propagated sequence. This can result i
 This model is inspired by Jamil's Transformer, Karpathy's GPT-2, and Meta's Llama architectures.
 """
 
+import math
+
 import torch
-from torch import nn
+import torch.nn as nn
+import torch.nn.functional as F
 
 
 class PositionalEncoding(nn.Module):
@@ -61,6 +64,59 @@ class PositionalEmbedding(nn.Module):
         scale = torch.sqrt(torch.tensor(self.d_model, dtype=x.dtype))
         embeddings = self.embedding(x) * scale
         return self.encoding(embeddings)
+
+
+class MultiHeadSelfAttention(nn.Module):
+    """Hybrid Causal Self-Attention block inspired by GPT-2 and Transformer models."""
+
+    def __init__(self, d_model: int, num_heads: int, max_seq: int):
+        super().__init__()
+        assert d_model % num_heads == 0, "Embedding dim must be divisible by number of heads"
+
+        self.num_heads = num_heads
+        self.d_model = d_model
+        self.d_k = d_model // num_heads  # Per-head dimension
+
+        # Linear projections for Q, K, V (each projects to d_model size)
+        self.w_q = nn.Linear(d_model, d_model)
+        self.w_k = nn.Linear(d_model, d_model)
+        self.w_v = nn.Linear(d_model, d_model)
+
+        # Final output projection
+        self.w_o = nn.Linear(d_model, d_model)
+
+        # Precompute causal mask
+        self.register_buffer(
+            "mask",
+            torch.tril(torch.ones(max_seq, max_seq)).view(1, 1, max_seq, max_seq),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B, T, D = x.shape  # Batch, Seq Len, Embedding Dim
+
+        # Project Q, K, V
+        q = self.w_q(x)
+        k = self.w_k(x)
+        v = self.w_v(x)
+
+        # Reshape for multi-head attention
+        q = q.view(B, T, self.num_heads, self.d_k).transpose(1, 2)  # (B, num_heads, T, d_k)
+        k = k.view(B, T, self.num_heads, self.d_k).transpose(1, 2)
+        v = v.view(B, T, self.num_heads, self.d_k).transpose(1, 2)
+
+        # Scaled Dot-Product Attention
+        attn_scores = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(self.d_k))
+        attn_scores = attn_scores.masked_fill(self.mask[:, :, :T, :T] == 0, float("-inf"))
+        attn_probs = F.softmax(attn_scores, dim=-1)
+
+        # Apply attention to values
+        y = attn_probs @ v  # (B, num_heads, T, d_k)
+
+        # Reshape back to original size
+        y = y.transpose(1, 2).contiguous().view(B, T, D)  # (B, T, D)
+
+        # Final projection
+        return self.w_o(y)
 
 
 class LayerNormalization(nn.Module):
