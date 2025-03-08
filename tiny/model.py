@@ -144,3 +144,48 @@ class FeedForward(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.fc2(self.act(self.fc1(x)))
+
+
+class DecoderBlock(nn.Module):
+    """A single decoder block with self-attention and feedforward layers."""
+
+    def __init__(self, d_model: int, num_heads: int, max_seq: int, ff_mult: float = 4.0):
+        super().__init__()
+        self.attn = MultiHeadSelfAttention(d_model, num_heads, max_seq)
+        self.ffn = FeedForward(d_model, ff_mult)
+
+        self.norm1 = LayerNormalization(d_model)
+        self.norm2 = LayerNormalization(d_model)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Self-attention + Residual + LayerNorm
+        x = x + self.attn(self.norm1(x))
+        # Feedforward + Residual + LayerNorm
+        x = x + self.ffn(self.norm2(x))
+        return x
+
+
+class TinyTransformer(nn.Module):
+    """A minimal GPT-style transformer"""
+
+    def __init__(
+        self,
+        vocab_size: int,
+        d_model: int,
+        num_layers: int,
+        num_heads: int,
+        max_seq: int,
+    ):
+        super().__init__()
+        self.embedding = PositionalEmbedding(vocab_size, d_model, max_seq)
+        self.blocks = nn.ModuleList(
+            [DecoderBlock(d_model, num_heads, max_seq) for _ in range(num_layers)]
+        )
+        self.norm = LayerNormalization(d_model)
+        self.proj = nn.Linear(d_model, vocab_size)  # Final projection
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.embedding(x)
+        for block in self.blocks:
+            x = block(x)
+        return self.proj(self.norm(x))  # Normalize and project to vocab size
