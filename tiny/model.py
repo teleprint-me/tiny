@@ -69,7 +69,7 @@ class PositionalEmbedding(nn.Module):
 class LayerNormalization(nn.Module):
     def __init__(self, d_model: int, eps: float = 1e-6):
         super().__init__()
-        self.register_buffer("eps", eps)
+        self.eps = eps
         self.alpha = nn.Parameter(torch.ones(d_model))  # Learnable scale
         self.bias = nn.Parameter(torch.zeros(d_model))  # Learnable bias
 
