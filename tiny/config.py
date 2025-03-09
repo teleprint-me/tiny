@@ -86,23 +86,23 @@ class TinyConfig:
             torch.cuda.manual_seed_all(self.seed)
 
     @property
-    def _blacklist(self) -> set[str]:
+    def _whitelist(self) -> set[str]:
         return {
-            "seed",  # Device
-            "dname",
-            "dtype",
-            "device",
-            "dataset_path",
-            "model_path",
-            "head_dim",
-            "hidden_dim",
-            "scale",  # Computed at runtime
+            "pad",
+            "bos",
+            "eos",
+            "unk",
+            "add_bos",
+            "add_eos",
+            "max_seq",
+            "batch_size",
+            "d_model",
+            "num_heads",
+            "eps",
+            "ff_mult",
+            "num_layers",
         }
 
     def as_dict(self) -> dict[str, any]:
         """Returns a dictionary representation of the config."""
-        kv = {}
-        for k, v in self.__dict__.items():
-            if k not in self._blacklist and not k.startswith("_"):
-                kv[k] = v
-        return kv
+        return {k: v for k, v in self.__dict__.items() if k in self._whitelist}
