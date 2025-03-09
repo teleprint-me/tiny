@@ -25,7 +25,7 @@ class TinyConfig:
     unk: str = "<unk>"
     add_bos: bool = True
     add_eos: bool = True
-    vocab_size: int = 0
+    vocab_size: int = 104
 
     # Dataset
     dataset_path: str = "data/tiny.json"
