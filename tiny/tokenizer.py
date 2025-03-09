@@ -1,8 +1,15 @@
 """
 Module: tiny.tokenizer
 Description: A super simple character level tokenizer.
+
+NOTE: list() is O(n) and dict() is O(1).
+The initial unicode code point computation is costly, but is mitigated by precomputation
+and caching the results. A list() can be leveraged to generate chunks of code points to
+parallelize the initial mapping. Once the indices and code points are precomputed, the
+dict() loses its ordering, but the mapping should implicitly preserve the expected indices.
 """
 
+import functools
 import json
 import os
 import unicodedata
@@ -10,99 +17,107 @@ import unicodedata
 from tiny.config import TinyConfig
 
 
-class Unicode:
-    MAPPING_FILE = "data/unicode.json"
+class TinyVocab:
+    MAPPING_FILE = "data/vocab.json"
 
-    def __init__(self):
-        self.char_to_index, self.index_to_char = self.load_mapping()
-
-    def generate_mapping(self):
-        """Generate a Unicode character-to-index mapping with inverse mapping."""
-        char_to_index = {}
-        index_to_char = []
-
-        index = 0
-        for codepoint in range(0x110000):  # Unicode range up to 0x10FFFF
-            char = chr(codepoint)
-            category = unicodedata.category(char)
-
-            # Exclude invalid characters (control chars, surrogates, unassigned)
-            if not (0xD800 <= codepoint <= 0xDFFF) and not category.startswith("C"):
-                char_to_index[char] = index
-                index_to_char.append(char)  # Use list for faster lookups
-                index += 1
-
-        # Save as JSON
-        data = {"forward": char_to_index, "inverse": index_to_char}
-        os.makedirs(os.path.dirname(self.MAPPING_FILE), exist_ok=True)
-        with open(self.MAPPING_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
-        return char_to_index, index_to_char
-
-    def load_mapping(self):
-        """Load the Unicode mapping if it exists, otherwise generate it."""
-        if os.path.exists(self.MAPPING_FILE):
-            with open(self.MAPPING_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return data["forward"], data["inverse"]
-        return self.generate_mapping()
-
-
-class TinyTokenizer:
-    def __init__(self, config):
+    def __init__(self, config: TinyConfig):
         self.pad: str = config.pad or "<pad>"
         self.bos: str = config.bos or "<bos>"
         self.eos: str = config.eos or "<eos>"
         self.unk: str = config.unk or "<unk>"
 
-        # Load Unicode mappings
-        unicode = Unicode()
-        self._stoi = unicode.char_to_index
-        self._itos = unicode.index_to_char
-
-        # Vocabulary with special tokens at the beginning
-        self._vocab = self.special + self._itos
-
-        # Precompute stoi and itos mappings
-        self._stoi = {s: i for i, s in enumerate(self._vocab)}
-        self._itos = self._vocab  # Keep list-based lookup
-
-    @property
-    def special(self):
+    @functools.lru_cache
+    def special(self) -> list[str]:
+        """Returns the list of special tokens."""
         return [self.pad, self.bos, self.eos, self.unk]
 
-    @property
-    def vocab(self):
-        return self._vocab  # Already precomputed
+    @functools.lru_cache
+    def mapping(self) -> list[str]:
+        """Returns the full vocabulary, including special tokens."""
+        return self._load_or_generate()
+
+    @functools.lru_cache
+    def stoi(self) -> dict[str, int]:
+        """Returns string-to-index mapping."""
+        return {s: i for i, s in enumerate(self.mapping())}
+
+    @functools.lru_cache
+    def itos(self) -> dict[int, str]:
+        """Returns index-to-string mapping."""
+        return {i: s for i, s in enumerate(self.mapping())}
+
+    def _load(self) -> list[str]:
+        with open(self.MAPPING_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def _save(self, mapping: list[str]) -> None:
+        # Save to JSON
+        os.makedirs(os.path.dirname(self.MAPPING_FILE), exist_ok=True)
+        with open(self.MAPPING_FILE, "w", encoding="utf-8") as f:
+            json.dump(mapping, f, ensure_ascii=False, indent=2)
+
+    def _load_or_generate(self) -> list[str]:
+        """Loads vocabulary if it exists, otherwise generates it."""
+        try:
+            return self._load()
+        except FileNotFoundError:
+            return self._generate()
+
+    def _generate(self) -> list[str]:
+        """Generate a Unicode character-to-index mapping."""
+        # NOTE: This is O(n) because the computation is linear and single threaded.
+        mapping = self.special()[:]  # Create a shallow copy
+
+        # Unicode range up to 0x10FFFF
+        for codepoint in range(0x110000):
+            char = chr(codepoint)
+            category = unicodedata.category(char)
+
+            # Exclude control characters, surrogates, unassigned characters
+            if not (0xD800 <= codepoint <= 0xDFFF) and not category.startswith("C"):
+                mapping.append(char)
+
+        self._save(mapping)
+
+        return mapping
+
+
+class TinyTokenizer:
+    def __init__(self, config: TinyConfig):
+        # Precompute the models vocabulary
+        self._vocab = TinyVocab(config)
 
     @property
-    def vocab_size(self):
-        return len(self._vocab)
+    def vocab(self) -> list[str]:
+        return self._vocab.mapping()
 
     @property
-    def stoi(self):
-        return self._stoi  # Use precomputed dict
+    def vocab_size(self) -> int:
+        return len(self._vocab.mapping())
 
     @property
-    def itos(self):
-        return self._itos  # Use precomputed list
+    def stoi(self) -> dict[str, int]:
+        return self._vocab.stoi()
+
+    @property
+    def itos(self) -> dict[int, str]:
+        return self._vocab.itos()
 
     @property
     def pad_id(self) -> int:
-        return self.stoi[self.pad]
+        return self.stoi[self._vocab.pad]
 
     @property
     def bos_id(self) -> int:
-        return self.stoi[self.bos]
+        return self.stoi[self._vocab.bos]
 
     @property
     def eos_id(self) -> int:
-        return self.stoi[self.eos]
+        return self.stoi[self._vocab.eos]
 
     @property
     def unk_id(self) -> int:
-        return self.stoi[self.unk]
+        return self.stoi[self._vocab.unk]
 
     def encode(self, text: str, add_bos: bool = False, add_eos: bool = False) -> list[int]:
         """Encodes a string into a list of token indices."""
