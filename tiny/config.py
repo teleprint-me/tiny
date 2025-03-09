@@ -116,3 +116,26 @@ class TinyConfig:
         for key, value in state_dict.items():
             if key in self._frozen_params:
                 setattr(self, key, value)
+
+    @classmethod
+    def logger(cls, cls_name: str, verbose: bool) -> logging.Logger:
+        """
+        Initialize and return a Logger instance.
+
+        :param cls_name: The name of the class that inherits from Logger.
+        :param verbose: A boolean indicating whether to enable verbose logging.
+        :return: Configured logger instance.
+        """
+        level = logging.DEBUG if verbose else logging.INFO
+        fmt = "%(levelname)s:%(filename)s:%(lineno)d: %(message)s"
+        logger = logging.getLogger(name=cls_name)
+        logger.setLevel(level)
+
+        # Check if the logger has handlers to avoid adding duplicates
+        if not logger.hasHandlers():
+            handler = logging.StreamHandler(stream=sys.stdout)
+            formatter = logging.Formatter(fmt=fmt)
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+
+        return logger
