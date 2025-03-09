@@ -11,6 +11,7 @@ dict() loses its ordering, but the mapping should implicitly preserve the expect
 
 import functools
 import json
+import multiprocessing
 import os
 import unicodedata
 
@@ -62,22 +63,32 @@ class TinyVocab:
         except FileNotFoundError:
             return self._generate()
 
-    def _generate(self) -> list[str]:
-        """Generate a Unicode character-to-index mapping."""
-        # NOTE: This is O(n) because the computation is linear and single threaded.
-        mapping = self.special()[:]  # Create a shallow copy
-
-        # Unicode range up to 0x10FFFF
-        for codepoint in range(0x110000):
+    def _filter_unicode(self, start: int, end: int) -> list[str]:
+        """Filters valid Unicode characters in the given range."""
+        mapping = []
+        for codepoint in range(start, end):
             char = chr(codepoint)
             category = unicodedata.category(char)
-
-            # Exclude control characters, surrogates, unassigned characters
             if not (0xD800 <= codepoint <= 0xDFFF) and not category.startswith("C"):
                 mapping.append(char)
+        return mapping
+
+    def _generate(self) -> list[str]:
+        """Generate a Unicode character-to-index mapping with multiprocessing."""
+        mapping = self.special()[:]  # Create a shallow copy of special tokens
+
+        num_workers = multiprocessing.cpu_count()
+        chunk_size = 0x110000 // num_workers
+        ranges = [(i, min(i + chunk_size, 0x110000)) for i in range(0, 0x110000, chunk_size)]
+
+        with multiprocessing.Pool(processes=num_workers) as pool:
+            results = pool.starmap(self._filter_unicode, ranges)
+
+        # Flatten the results
+        for sublist in results:
+            mapping.extend(sublist)
 
         self._save(mapping)
-
         return mapping
 
 
