@@ -25,8 +25,7 @@ class PositionalEncoding(nn.Module):
         self.dtype = dtype
 
         # Register precomputed positional encodings as a non-trainable buffer
-        pe = self._generate_sinusoidal_encoding()
-        self.register_buffer("pe", pe, persistent=False)  # Explicitly non-trainable
+        self.register_buffer("pe", self._generate_sinusoidal_encoding())
 
     def _generate_sinusoidal_encoding(self) -> torch.Tensor:
         """Creates sinusoidal positional encodings as described in Vaswani et al. (2017)."""
