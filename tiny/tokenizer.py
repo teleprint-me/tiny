@@ -3,16 +3,17 @@ Module: tiny.tokenizer
 Description: A super simple character level tokenizer.
 """
 
-from dataclasses import dataclass
 from string import printable
 
+from tiny.config import TinyConfig
 
-@dataclass(frozen=True)
+
 class TinyTokenizer:
-    pad: str = "<pad>"
-    bos: str = "<bos>"
-    eos: str = "<eos>"
-    unk: str = "<unk>"
+    def __init__(self, config: TinyConfig):
+        self.pad: str = config.pad or "<pad>"
+        self.bos: str = config.bos or "<bos>"
+        self.eos: str = config.eos or "<eos>"
+        self.unk: str = config.unk or "<unk>"
 
     @property
     def special(self) -> list[str]:
@@ -64,7 +65,8 @@ class TinyTokenizer:
 
 # Usage example
 if __name__ == "__main__":
-    tokenizer = TinyTokenizer()
+    config = TinyConfig()
+    tokenizer = TinyTokenizer(config)
     encoded = tokenizer.encode("Hello, world!", add_bos=True, add_eos=True)
     decoded = tokenizer.decode(encoded)
     print(f"Encoded: {encoded}")
