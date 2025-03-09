@@ -13,16 +13,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tiny.config import TinyConfig
+
 
 class PositionalEncoding(nn.Module):
     """Standard fixed sinusoidal positional encoding for transformer models."""
 
-    def __init__(self, d_model: int, max_seq: int, dtype: torch.dtype = torch.float32):
+    def __init__(self, config: TinyConfig):
         super().__init__()
-        assert d_model % 2 == 0, "d_model must be even for sinusoidal encoding"
-        self.d_model = d_model
-        self.max_seq = max_seq
-        self.dtype = dtype
+        self.d_model = config.d_model
+        self.max_seq = config.max_seq
+        self.dtype = config.dtype
 
         # Register precomputed positional encodings as a non-trainable buffer
         self.register_buffer("pe", self._generate_sinusoidal_encoding())
@@ -46,17 +47,11 @@ class PositionalEncoding(nn.Module):
 class PositionalEmbedding(nn.Module):
     """Token + positional embedding for transformer decoder."""
 
-    def __init__(
-        self,
-        vocab_size: int,
-        d_model: int,
-        max_seq: int,
-        dtype: torch.dtype = torch.float32,
-    ):
+    def __init__(self, config: TinyConfig):
         super().__init__()
-        self.d_model = d_model
-        self.tokens = nn.Embedding(vocab_size, d_model)
-        self.encodings = PositionalEncoding(d_model, max_seq, dtype)
+        self.d_model = config.d_model
+        self.tokens = nn.Embedding(config.vocab_size, config.d_model)
+        self.encodings = PositionalEncoding(config)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Scale by sqrt(d_model), Vaswani et al.’s embedding scaling trick
@@ -68,26 +63,26 @@ class PositionalEmbedding(nn.Module):
 class MultiHeadSelfAttention(nn.Module):
     """Hybrid Causal Self-Attention block inspired by GPT-2 and Transformer models."""
 
-    def __init__(self, d_model: int, num_heads: int, max_seq: int):
+    def __init__(self, config: TinyConfig):
         super().__init__()
-        assert d_model % num_heads == 0, "Embedding dim must be divisible by number of heads"
-
-        self.num_heads = num_heads
-        self.d_model = d_model
-        self.d_k = d_model // num_heads  # Per-head dimension
+        self.num_heads = config.num_heads
+        self.d_model = config.d_model
+        self.d_k = config.head_dim  # Per-head dimension
 
         # Linear projections for Q, K, V (each projects to d_model size)
-        self.wq = nn.Linear(d_model, d_model)
-        self.wk = nn.Linear(d_model, d_model)
-        self.wv = nn.Linear(d_model, d_model)
+        self.wq = nn.Linear(config.d_model, config.d_model)
+        self.wk = nn.Linear(config.d_model, config.d_model)
+        self.wv = nn.Linear(config.d_model, config.d_model)
 
         # Final output projection
-        self.wo = nn.Linear(d_model, d_model)
+        self.wo = nn.Linear(config.d_model, config.d_model)
 
         # Precompute causal mask
         self.register_buffer(
             "mask",
-            torch.tril(torch.ones(max_seq, max_seq)).view(1, 1, max_seq, max_seq),
+            torch.tril(torch.ones(config.max_seq, config.max_seq)).view(
+                1, 1, config.max_seq, config.max_seq
+            ),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -119,11 +114,11 @@ class MultiHeadSelfAttention(nn.Module):
 
 
 class LayerNormalization(nn.Module):
-    def __init__(self, d_model: int, eps: float = 1e-6):
+    def __init__(self, config: TinyConfig):
         super().__init__()
-        self.eps = eps
-        self.alpha = nn.Parameter(torch.ones(d_model))  # Learnable scale
-        self.bias = nn.Parameter(torch.zeros(d_model))  # Learnable bias
+        self.eps = config.eps
+        self.alpha = nn.Parameter(torch.ones(config.d_model))  # Learnable scale
+        self.bias = nn.Parameter(torch.zeros(config.d_model))  # Learnable bias
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         mean = x.mean(dim=-1, keepdim=True)
@@ -134,11 +129,10 @@ class LayerNormalization(nn.Module):
 class FeedForward(nn.Module):
     """Hybrid FeedForward block inspired by GPT-2 and Transformer models."""
 
-    def __init__(self, d_model: int, ff_mult: float = 4.0):
+    def __init__(self, config: TinyConfig):
         super().__init__()
-        hidden = int(ff_mult * d_model)  # Hidden layer size
-        self.fc1 = nn.Linear(d_model, hidden)
-        self.fc2 = nn.Linear(hidden, d_model)
+        self.fc1 = nn.Linear(config.d_model, config.hidden_dim)
+        self.fc2 = nn.Linear(config.hidden_dim, config.d_model)
         self.act = nn.GELU(approximate="tanh")  # GPT-2 uses GELU
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -148,13 +142,13 @@ class FeedForward(nn.Module):
 class DecoderBlock(nn.Module):
     """A single decoder block with self-attention and feedforward layers."""
 
-    def __init__(self, d_model: int, num_heads: int, max_seq: int, ff_mult: float = 4.0):
+    def __init__(self, config: TinyConfig):
         super().__init__()
-        self.attn = MultiHeadSelfAttention(d_model, num_heads, max_seq)
-        self.ffn = FeedForward(d_model, ff_mult)
+        self.attn = MultiHeadSelfAttention(config)
+        self.ffn = FeedForward(config)
 
-        self.norm1 = LayerNormalization(d_model)
-        self.norm2 = LayerNormalization(d_model)
+        self.norm1 = LayerNormalization(config)
+        self.norm2 = LayerNormalization(config)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Self-attention + Residual + LayerNorm
@@ -167,24 +161,22 @@ class DecoderBlock(nn.Module):
 class TinyTransformer(nn.Module):
     """A minimal GPT-style transformer"""
 
-    def __init__(
-        self,
-        vocab_size: int,
-        d_model: int,
-        num_layers: int,
-        num_heads: int,
-        max_seq: int,
-    ):
+    def __init__(self, config: TinyConfig):
         super().__init__()
-        self.embedding = PositionalEmbedding(vocab_size, d_model, max_seq)
-        self.blocks = nn.ModuleList(
-            [DecoderBlock(d_model, num_heads, max_seq) for _ in range(num_layers)]
-        )
-        self.norm = LayerNormalization(d_model)
-        self.proj = nn.Linear(d_model, vocab_size)  # Final projection
+        self.embedding = PositionalEmbedding(config)
+        self.blocks = nn.ModuleList([DecoderBlock(config) for _ in range(config.num_layers)])
+        self.norm = LayerNormalization(config)
+        self.proj = nn.Linear(config.d_model, config.vocab_size)  # Final projection
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.embedding(x)
         for block in self.blocks:
             x = block(x)
         return self.proj(self.norm(x))  # Normalize and project to vocab size
+
+
+# Usage example
+if __name__ == "__main__":
+    config = TinyConfig(vocab_size=26)
+    tiny = TinyTransformer(config)
+    print("TinyTransformer Successfully Initialized!")
