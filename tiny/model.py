@@ -177,6 +177,11 @@ class TinyTransformer(nn.Module):
 
 # Usage example
 if __name__ == "__main__":
-    config = TinyConfig(vocab_size=26)
+    from tiny.tokenizer import TinyTokenizer
+
+    config = TinyConfig()
+    tokenizer = TinyTokenizer(config)  # Set the vocab size
     tiny = TinyTransformer(config)
-    print("TinyTransformer Successfully Initialized!")
+
+    print(config)
+    print(tiny)

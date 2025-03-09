@@ -15,6 +15,11 @@ class TinyTokenizer:
         self.eos: str = config.eos or "<eos>"
         self.unk: str = config.unk or "<unk>"
 
+        # NOTE: I don't like this, but it's an easy hack.
+        # The alternative is constantly setting it after the fact.
+        # At least this remains encapsulated and we don't have to remember to set it.
+        config.vocab_size = self.vocab_size
+
     @property
     def special(self) -> list[str]:
         return [self.pad, self.bos, self.eos, self.unk]

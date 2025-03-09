@@ -88,7 +88,7 @@ class TinyConfig:
             torch.cuda.manual_seed_all(self.seed)
 
     @property
-    def _whitelist(self) -> set[str]:
+    def _allow_list(self) -> set[str]:
         return {
             "pad",
             "bos",
@@ -107,4 +107,4 @@ class TinyConfig:
 
     def as_dict(self) -> dict[str, any]:
         """Returns a dictionary representation of the config."""
-        return {k: v for k, v in self.__dict__.items() if k in self._whitelist}
+        return {k: v for k, v in self.__dict__.items() if k in self._allow_list}
