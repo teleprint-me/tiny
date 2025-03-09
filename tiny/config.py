@@ -19,6 +19,7 @@ class TinyConfig:
     dtype: torch.dtype = torch.float32
 
     # Tokenizer
+    vocab_path: str = "data/vocab.json"
     pad: str = "<pad>"
     bos: str = "<bos>"
     eos: str = "<eos>"

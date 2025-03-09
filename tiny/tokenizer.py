@@ -18,13 +18,12 @@ from tiny.config import TinyConfig
 
 
 class TinyVocab:
-    MAPPING_FILE = "data/vocab.json"
-
     def __init__(self, config: TinyConfig):
-        self.pad: str = config.pad or "<pad>"
-        self.bos: str = config.bos or "<bos>"
-        self.eos: str = config.eos or "<eos>"
-        self.unk: str = config.unk or "<unk>"
+        self.vocab_path: str = config.vocab_path
+        self.pad: str = config.pad
+        self.bos: str = config.bos
+        self.eos: str = config.eos
+        self.unk: str = config.unk
 
     @functools.lru_cache
     def special(self) -> list[str]:
@@ -47,13 +46,13 @@ class TinyVocab:
         return {i: s for i, s in enumerate(self.mapping())}
 
     def _load(self) -> list[str]:
-        with open(self.MAPPING_FILE, "r", encoding="utf-8") as f:
+        with open(self.vocab_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
     def _save(self, mapping: list[str]) -> None:
         # Save to JSON
-        os.makedirs(os.path.dirname(self.MAPPING_FILE), exist_ok=True)
-        with open(self.MAPPING_FILE, "w", encoding="utf-8") as f:
+        os.makedirs(os.path.dirname(self.vocab_path), exist_ok=True)
+        with open(self.vocab_path, "w", encoding="utf-8") as f:
             json.dump(mapping, f, ensure_ascii=False, indent=2)
 
     def _load_or_generate(self) -> list[str]:
@@ -135,20 +134,33 @@ class TinyTokenizer:
 
 # Usage example
 if __name__ == "__main__":
-    config = TinyConfig()
+
+    def test_tokenizer(tokenizer: TinyTokenizer, text: str) -> None:
+        encoded = tokenizer.encode(text, add_bos=True, add_eos=True)
+        decoded = tokenizer.decode(encoded)
+        print(f"Text: {text}")
+        print(f"Encoded: [{', '.join(f'\033[33;1;1m{repr(i)}\033[0m' for i in encoded)}]")
+        print(f"Decoded: {decoded}")
+        print()
+
+    config = TinyConfig(
+        vocab_path="data/vocab.json",
+        pad="<pad>",
+        bos="<s>",
+        eos="</s>",
+        unk="<unk>",
+    )
     tokenizer = TinyTokenizer(config)
-    print(f"Vocab Size: {tokenizer.vocab_size}")
+    print(f"Vocab Size: \033[32;1;1m{tokenizer.vocab_size}\033[0m")
 
-    text = "Hello, world!"
-    encoded = tokenizer.encode(text, add_bos=True, add_eos=True)
-    decoded = tokenizer.decode(encoded)
-    print(f"Text: {text}")
-    print(f"Encoded: {encoded}")
-    print(f"Decoded: {decoded}")
-
-    text = "こんにちは世界！"
-    encoded = tokenizer.encode(text, add_bos=True, add_eos=True)
-    decoded = tokenizer.decode(encoded)
-    print(f"Text: {text}")
-    print(f"Encoded: {encoded}")
-    print(f"Decoded: {decoded}")
+    tests = [
+        "Hello, world!",  # english
+        "¡Hola Mundo!",  # spanish
+        "Olá, mundo!",  # portuguese
+        "Γεια σας, κόσμος!",  # greek
+        "مرحبا بالعالم!",  # arabic
+        "こんにちは世界！",  # japanese
+        "你好世界！",  # chinese
+    ]
+    for test in tests:
+        test_tokenizer(tokenizer, test)
