@@ -23,11 +23,13 @@ class TinyConfig:
     unk: str = "<unk>"
     add_bos: bool = True
     add_eos: bool = True
+    vocab_size: int = 0
 
     # Dataset
     dataset_path: str = "data/tiny.json"
     max_seq: int = 128
     batch_size: int = 8
+    shuffle: bool = False
 
     # Model
     model_path: str = "models/tiny.pth"
