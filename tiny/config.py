@@ -3,7 +3,9 @@ Module: tiny.config
 Description: User defined model and pipeline configuration settings.
 """
 
+import logging
 import random
+import sys
 from dataclasses import dataclass
 
 import torch
@@ -88,7 +90,8 @@ class TinyConfig:
             torch.cuda.manual_seed_all(self.seed)
 
     @property
-    def _allow_list(self) -> set[str]:
+    def _frozen_params(self) -> set[str]:
+        """Parameters that are stored in the model checkpoint."""
         return {
             "pad",
             "bos",
@@ -97,7 +100,6 @@ class TinyConfig:
             "add_bos",
             "add_eos",
             "max_seq",
-            "batch_size",
             "d_model",
             "num_heads",
             "eps",
@@ -105,6 +107,12 @@ class TinyConfig:
             "num_layers",
         }
 
-    def as_dict(self) -> dict[str, any]:
-        """Returns a dictionary representation of the config."""
-        return {k: v for k, v in self.__dict__.items() if k in self._allow_list}
+    def get_frozen_params(self) -> dict[str, any]:
+        """Gets frozen parameters for a model checkpoint."""
+        return {k: v for k, v in self.__dict__.items() if k in self._frozen_params}
+
+    def set_frozen_params(self, state_dict: dict) -> None:
+        """Sets frozen parameters from a model checkpoint."""
+        for key, value in state_dict.items():
+            if key in self._frozen_params:
+                setattr(self, key, value)
