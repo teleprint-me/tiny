@@ -10,6 +10,7 @@ from torch.optim.adamw import AdamW
 from torch.optim.optimizer import Optimizer
 
 from tiny.config import TinyConfig
+from tiny.dataset import TinyDataset
 from tiny.model import TinyTransformer
 from tiny.state import TinyState
 from tiny.tokenizer import TinyTokenizer
@@ -27,6 +28,10 @@ class TinyTrainer:
     @property
     def tokenizer(self) -> TinyTokenizer:
         return self.state.tokenizer
+
+    @property
+    def dataset(self) -> TinyDataset:
+        return self.state.dataset
 
     @property
     def model(self) -> TinyTransformer:
