@@ -37,6 +37,10 @@ class TinyTrainer:
     def model(self) -> TinyTransformer:
         return self.state.model
 
+    @property
+    def device(self) -> TinyConfig:
+        return self.config.device
+
     def create_optimizer(self) -> Optimizer:
         """Return the AdamW optimizer."""
         return AdamW(
@@ -53,3 +57,28 @@ class TinyTrainer:
             ignore_index=self.tokenizer.pad_id,
             reduction=self.config.reduction,
         )
+
+    def train(self) -> None:
+        self.state.load_model()
+
+        optimizer = self.create_optimizer()
+        criterion = self.create_criterion()
+
+        for epoch in range(self.config.num_epochs):
+            total_loss = 0
+            for batch, (x, y) in enumerate(self.dataset):
+                x, y = x.to(self.device), y.to(self.device)
+                logits = self.model(x)
+                loss = criterion(logits.view(-1, logits.size(-1), y.view(-1)))
+                loss = loss / self.config.grad_accum_steps
+
+                loss.backward()
+
+                if (batch + 1) % self.config.grad_accum_steps == 0:
+                    optimizer.step()
+                    optimizer.zero_grad()
+
+                total_loss += loss.item() * self.config.grad_accum_steps
+
+            if (epoch + 1) % self.config.save_every == 0:
+                self.state.save_model()
