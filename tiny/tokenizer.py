@@ -25,6 +25,7 @@ class TinyVocab:
         self.bos: str = config.bos
         self.eos: str = config.eos
         self.unk: str = config.unk
+        self.logger = config.logger(self.__class__.__name__, config.verbose)
 
     @functools.lru_cache
     def special(self) -> list[str]:
@@ -48,13 +49,16 @@ class TinyVocab:
 
     def _load(self) -> list[str]:
         with open(self.vocab_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+            vocab = json.load(f)
+            self.logger.info(f"Loaded vocab from {self.vocab_path}")
+            return vocab
 
     def _save(self, mapping: list[str]) -> None:
         # Save to JSON
         os.makedirs(os.path.dirname(self.vocab_path), exist_ok=True)
         with open(self.vocab_path, "w", encoding="utf-8") as f:
             json.dump(mapping, f, ensure_ascii=False, indent=2)
+        self.logger.info(f"Saved vocab to {self.vocab_path}")
 
     def _load_or_generate(self) -> list[str]:
         """Loads vocabulary if it exists, otherwise generates it."""
@@ -75,6 +79,8 @@ class TinyVocab:
 
     def _generate(self) -> list[str]:
         """Generate a Unicode character-to-index mapping with multiprocessing."""
+        self.logger.info("Training vocab...")
+
         mapping = self.special()[:]  # Create a shallow copy of special tokens
 
         num_workers = multiprocessing.cpu_count()
@@ -89,6 +95,8 @@ class TinyVocab:
             mapping.extend(sublist)
 
         self._save(mapping)
+
+        self.logger.info(f"Trained vocab using {num_workers} threads.")
         return mapping
 
 
