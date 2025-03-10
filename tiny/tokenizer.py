@@ -79,14 +79,13 @@ class TinyVocab:
 
     def _generate(self) -> list[str]:
         """Generate a Unicode character-to-index mapping with multiprocessing."""
-        self.logger.info("Training vocab...")
-
         mapping = self.special()[:]  # Create a shallow copy of special tokens
 
         num_workers = multiprocessing.cpu_count()
         chunk_size = 0x110000 // num_workers
         ranges = [(i, min(i + chunk_size, 0x110000)) for i in range(0, 0x110000, chunk_size)]
 
+        self.logger.info(f"Training vocab: threads={num_workers}, chunks={chunk_size}.")
         with multiprocessing.Pool(processes=num_workers) as pool:
             results = pool.starmap(self._filter_unicode, ranges)
 
@@ -94,9 +93,8 @@ class TinyVocab:
         for sublist in results:
             mapping.extend(sublist)
 
+        self.logger.info("Completed training vocab.")
         self._save(mapping)
-
-        self.logger.info(f"Trained vocab using {num_workers} threads.")
         return mapping
 
 
