@@ -42,17 +42,17 @@ class TinyConfig:
     ff_mult: float = 4.0
     num_layers: int = 4
 
+    # Trainer
+    num_epochs: int = 10
+    save_every: int = 10
+    grad_accum_steps: int = 1
     # Optimizer
     recurse: bool = True
     lr: float = 1e-5
     weight_decay: float = 1e-2
     amsgrad: bool = False
-
     # Criterion
     reduction: str = "mean"
-
-    # Trainer
-    # TODO
 
     # Generator
     # TODO
