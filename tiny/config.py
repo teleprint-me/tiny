@@ -73,6 +73,9 @@ class TinyConfig:
     # Generator
     # TODO
 
+    # General
+    verbose: bool = False
+
     def __post_init__(self):
         assert self.d_model % 2 == 0, "d_model must be even for sinusoidal encoding"
         assert self.d_model % self.num_heads == 0, "d_model must be divisible by num_heads"
