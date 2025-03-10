@@ -16,17 +16,23 @@ class TinyProcessor:
     def __init__(self, config: TinyConfig, tokenizer: TinyTokenizer):
         self.config = config
         self.tokenizer = tokenizer
+        self.dataset = None
+        self.logger = config.logger(self.__class__.__name__, config.verbose)
 
+    def _load_dataset(self) -> None:
+        self.logger.info(f"Loading dataset from {self.config.dataset_path}.")
         with open(self.config.dataset_path, "r") as file:
             self.dataset = json.load(file)
+        self.logger.info("Successfully loaded dataset.")
 
-    def calc_max_seq(self):
+    def _calc_max_seq(self) -> None:
+        self.logger.info("Calculating the maximum sequence length.")
         # Calculate the longest pair
         for pair in self.dataset:
             # input is the beginning of the sequence
-            source = tokenizer.encode(pair["input"], add_bos=self.config.add_bos)
+            source = self.tokenizer.encode(pair["input"], add_bos=self.config.add_bos)
             # target is the predicted output which continues on from the input sequence
-            target = tokenizer.encode(pair["target"], add_eos=self.config.add_eos)
+            target = self.tokenizer.encode(pair["target"], add_eos=self.config.add_eos)
             # calculate the max length of any given sequence
             self.config.max_seq = max(len(source) + len(target), self.config.max_seq)
 
@@ -34,20 +40,28 @@ class TinyProcessor:
         if self.config.max_seq % 2 != 0:
             self.config.max_seq += 1  # Should probably be some power of 2, but I'm being lazy
 
-    def pad(self, tokens: list[int]) -> list[int]:
+        self.logger.info(f"Maximum sequence length set to {self.config.max_seq}")
+
+    def _pad(self, tokens: list[int]) -> list[int]:
         # append a sequence of pad ids to a given sequence up to its max length
         return tokens + [self.tokenizer.pad_id] * (self.config.max_seq - len(tokens))
 
     def encode(self) -> list[dict[str, list[int]]]:
-        # only do this right before we process and encode the input-target pairs
-        self.calc_max_seq()
+        self._load_dataset()
+        self._calc_max_seq()
+
+        self.logger.info(
+            f"Encoding dataset: add_bos={self.config.add_bos}, add_eos={self.config.add_eos}"
+        )
 
         # preprocess the input-target pairs
         encoded = []
         for pair in self.dataset:
-            source = self.pad(tokenizer.encode(pair["input"], add_bos=self.config.add_bos))
-            target = self.pad(tokenizer.encode(pair["target"], add_eos=self.config.add_eos))
+            source = self._pad(self.tokenizer.encode(pair["input"], add_bos=self.config.add_bos))
+            target = self._pad(self.tokenizer.encode(pair["target"], add_eos=self.config.add_eos))
             encoded.append({"input": source, "target": target})
+
+        self.logger.info(f"Successfully encoded dataset using {len(self.dataset)} pairs")
         return encoded
 
 
