@@ -1,6 +1,8 @@
 """
 Module: tiny.trainer
 Description: A simple trainer for the Tiny Transformer model.
+
+The state is responsible for keeping everything in sync, so the config is abdicated to the state.
 """
 
 import torch.nn as nn
@@ -14,24 +16,21 @@ from tiny.tokenizer import TinyTokenizer
 
 
 class TinyTrainer:
-    def __init__(self, state: TinyState):
-        self._state = state
+    def __init__(self, config: TinyConfig):
+        self.state = TinyState(config)
+        self.logger = config.logger(self.__class__.__name__, config.verbose)
 
     @property
     def config(self) -> TinyConfig:
-        return self._state.config
-
-    @property
-    def state(self) -> TinyState:
-        return self._state
+        return self.state.config
 
     @property
     def tokenizer(self) -> TinyTokenizer:
-        return self._state.tokenizer
+        return self.state.tokenizer
 
     @property
     def model(self) -> TinyTransformer:
-        return self._state.model
+        return self.state.model
 
     def create_optimizer(self) -> Optimizer:
         """Return the AdamW optimizer."""
