@@ -21,14 +21,14 @@ class TinyArgs:
             argparse.Namespace: Parsed arguments.
         """
 
+        # Shared arguments
         self.add_general_args()
-
         self.add_device_args()
         self.add_tokenizer_args()
         self.add_model_args()
 
         if mode == "trainer":
-            self.add_dataset_args()
+            self.add_dataset_args()  # Training input-target pairs
             self.add_trainer_args()  # Training hyperparameters
             self.add_optimizer_args()  # Optimizer settings
             self.add_criterion_args()  # Loss function
@@ -63,8 +63,28 @@ class TinyArgs:
     def add_tokenizer_args(self) -> None:
         self.parser.add_argument(
             "--vocab-path",
-            default="model/tokenizer.json",
-            help="Path to tokenizer model.",
+            required=True,
+            help="Path to tokenizer models vocabulary.",
+        )
+        self.parser.add_argument(
+            "--pad-token",
+            default="<pad>",
+            help="Set the pad token (Default: <pad>)",
+        )
+        self.parser.add_argument(
+            "--bos-token",
+            default="<bos>",
+            help="Set the beginning-of-sequence token (Default: <bos>)",
+        )
+        self.parser.add_argument(
+            "--eos-token",
+            default="<eos>",
+            help="Set the end-of-sequence token (Default: <eos>)",
+        )
+        self.parser.add_argument(
+            "--unk-token",
+            default="<unk>",
+            help="Set the unkown token (Default: <unk>).",
         )
         self.parser.add_argument(
             "--add-bos",
@@ -75,26 +95,6 @@ class TinyArgs:
             "--add-eos",
             action="store_false",
             help="Enable end-of-sequence token (Default: True).",
-        )
-
-    def add_dataset_args(self) -> None:
-        """Arguments related to dataset loading and preprocessing."""
-
-        self.parser.add_argument(
-            "--dataset-path",
-            required=True,
-            help="Path to dataset file (.json, .txt).",
-        )
-        self.parser.add_argument(
-            "--batch-size",
-            type=int,
-            default=8,
-            help="Batch size for training (Default: 8).",
-        )
-        self.parser.add_argument(
-            "--shuffle",
-            action="store_true",
-            help="Shuffle the dataset (Default: False).",
         )
 
     def add_model_args(self) -> None:
@@ -108,38 +108,58 @@ class TinyArgs:
         self.parser.add_argument(
             "--max-seq",
             type=int,
-            default=128,
-            help="Maximum sequence length (Default: 128).",
+            default=256,
+            help="Maximum sequence length (Default: 256).",
         )
         self.parser.add_argument(
             "--d-model",
             type=int,
-            default=256,
-            help="Embedding dimension size (Default: 256).",
+            default=128,
+            help="Embedding dimension size (Default: 128).",
         )
         self.parser.add_argument(
             "--num-heads",
             type=int,
-            default=4,
-            help="Number of attention heads (Default: 4).",
+            default=16,
+            help="Number of attention heads (Default: 16).",
         )
         self.parser.add_argument(
             "--eps",
             type=float,
-            default=1e-8,
-            help="Epsilon for numerical stability (Default: 1e-8).",
+            default=1e-6,
+            help="Epsilon for numerical stability (Default: 1e-6).",
         )
         self.parser.add_argument(
             "--ff-mult",
             type=float,
-            default=4.0,
-            help="Feed-forward network expansion factor (Default: 4.0).",
+            default=3.0,
+            help="Feed-forward network expansion factor (Default: 3.0).",
         )
         self.parser.add_argument(
             "--num-layers",
             type=int,
+            default=4,
+            help="Number of transformer layers (Default: 4).",
+        )
+
+    def add_dataset_args(self) -> None:
+        """Arguments related to dataset loading and preprocessing."""
+
+        self.parser.add_argument(
+            "--dataset-path",
+            required=True,
+            help="Path to dataset file (.json).",
+        )
+        self.parser.add_argument(
+            "--batch-size",
+            type=int,
             default=8,
-            help="Number of transformer layers (Default: 8).",
+            help="Batch size for training (Default: 8).",
+        )
+        self.parser.add_argument(
+            "--shuffle",
+            action="store_true",
+            help="Shuffle the dataset (Default: False).",
         )
 
     def add_trainer_args(self) -> None:
@@ -176,14 +196,14 @@ class TinyArgs:
         self.parser.add_argument(
             "--lr",
             type=float,
-            default=1e-4,
-            help="Optimizer learning rate (Default: 1e-4).",
+            default=1e-3,
+            help="Optimizer learning rate (Default: 1e-3).",
         )
         self.parser.add_argument(
             "--weight-decay",
             type=float,
-            default=0.0,
-            help="Weight decay (Default: 0.0).",
+            default=1e-2,
+            help="Weight decay (Default: 1e-2).",
         )
         self.parser.add_argument(
             "--amsgrad",
@@ -218,8 +238,8 @@ class TinyArgs:
         self.parser.add_argument(
             "--temperature",
             type=float,
-            default=0.8,
-            help="Sampling temperature (Default: 0.8). Lower is more deterministic.",
+            default=0.5,
+            help="Sampling temperature (Default: 0.5). Lower is more deterministic.",
         )
         self.parser.add_argument(
             "--top-k",

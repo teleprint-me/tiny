@@ -141,6 +141,8 @@ if __name__ == "__main__":
     args = TinyArgs("Tiny Trainer CLI").parse_args("trainer")
 
     config = TinyConfig(
+        # General
+        verbose=args.verbose,
         # Device
         seed=args.seed,
         dname=args.dname,
@@ -177,8 +179,6 @@ if __name__ == "__main__":
         amsgrad=args.amsgrad,
         # Criterion
         reduction=args.reduction,
-        # General
-        verbose=args.verbose,
     )
 
     trainer = TinyTrainer(config)

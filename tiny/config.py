@@ -32,6 +32,9 @@ import torch
 
 @dataclass
 class TinyConfig:
+    # General
+    verbose: bool = False
+
     # Device
     seed: int = 42
     dname: str = "cpu"
@@ -45,39 +48,43 @@ class TinyConfig:
     unk: str = "<unk>"
     add_bos: bool = True
     add_eos: bool = True
-    vocab_size: int = 104
-
-    # Dataset
-    dataset_path: str = "data/hotpot.json"
-    max_seq: int = 128
-    batch_size: int = 8
-    shuffle: bool = False
+    vocab_size: int = 149020
 
     # Model
     model_path: str = "model/tiny.pth"
-    d_model: int = 256
+    max_seq: int = 256
+    d_model: int = 128
     num_heads: int = 16
     eps: float = 1e-6
-    ff_mult: float = 4.0
+    ff_mult: float = 3.0
     num_layers: int = 4
+
+    # Dataset
+    dataset_path: str = "data/hotpot.json"
+    batch_size: int = 8
+    shuffle: bool = False
 
     # Trainer
     num_epochs: int = 10
     save_every: int = 10
     grad_accum_steps: int = 1
+
     # Optimizer
     recurse: bool = True
-    lr: float = 1e-5
+    lr: float = 1e-3
     weight_decay: float = 1e-2
     amsgrad: bool = False
+
     # Criterion
     reduction: str = "mean"
 
     # Generator
-    # TODO
-
-    # General
-    verbose: bool = False
+    max_tokens: int = 128
+    temperature: float = 0.5
+    top_k: int = 50
+    top_p: float = 0.9
+    repetition_penalty: float = 1.2
+    greedy: bool = False
 
     def __post_init__(self):
         assert self.d_model % 2 == 0, "d_model must be even for sinusoidal encoding"
