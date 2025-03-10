@@ -12,6 +12,9 @@ While others overlap:
 
 - eps
 - max_seq
+- add_bos
+- add_eos
+- vocab_size
 
 So, it's fine for now since it simplifies the general pipeline.
 
@@ -45,13 +48,13 @@ class TinyConfig:
     vocab_size: int = 104
 
     # Dataset
-    dataset_path: str = "data/tiny.json"
+    dataset_path: str = "data/hotpot.json"
     max_seq: int = 128
     batch_size: int = 8
     shuffle: bool = False
 
     # Model
-    model_path: str = "models/tiny.pth"
+    model_path: str = "model/tiny.pth"
     d_model: int = 256
     num_heads: int = 16
     eps: float = 1e-6

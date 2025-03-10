@@ -65,8 +65,8 @@ def parse_args():
     )
     parser.add_argument(
         "--output",
-        default="data/tiny.json",
-        help="Path to write the output dataset to (Default: 'data/tiny.json').",
+        default="data/hotpot.json",
+        help="Path to write the output dataset to (Default: 'data/hotpot.json').",
     )
     return parser.parse_args()
 
