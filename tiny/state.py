@@ -17,19 +17,14 @@ from tiny.tokenizer import TinyTokenizer
 
 
 class TinyState:
-    tokenizer = None
-    dataset = None
-    checkpoint = None
-    model = None
-
     def __init__(self, config: TinyConfig):
         self.config = config
         self.logger = config.logger(self.__class__.__name__, config.verbose)
 
-        self.load_tokenizer()
-        self.load_dataset()
-        self.load_checkpoint()
-        self.load_model()
+        self.tokenizer = None
+        self.dataset = None
+        self.checkpoint = None
+        self.model = None
 
     def load_tokenizer(self) -> None:
         self.tokenizer = TinyTokenizer(self.config)
@@ -42,12 +37,15 @@ class TinyState:
     def load_checkpoint(self) -> None:
         """Return the model state dict."""
         try:
-            self.checkpoint = torch.load(self.model_path)
+            self.checkpoint = torch.load(self.config.model_path)
         except (FileNotFoundError,):
             self.checkpoint = {}
 
     def load_model(self) -> None:
-        self.checkpoint = self.create_checkpoint()
+        # Load dependencies
+        self.load_tokenizer()
+        self.load_dataset()
+        self.load_checkpoint()
 
         # Override select parameters between runs
         if "config" in self.checkpoint:
@@ -69,5 +67,5 @@ class TinyState:
             "config": self.config.get_frozen_params(),
             "state": self.model.state_dict(),
         }
-        torch.save(state_dict, self.model_path)
-        self.logger.info(f"Model saved to {self.model_path}")
+        torch.save(state_dict, self.config.model_path)
+        self.logger.info(f"Model saved to {self.config.model_path}")
