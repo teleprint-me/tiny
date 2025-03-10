@@ -3,6 +3,8 @@ Module: tiny.trainer
 Description: A simple trainer for the Tiny Transformer model.
 
 The state is responsible for keeping everything in sync, so the config is abdicated to the state.
+I intentionally omit the scheduler to keep things as reasonably simple as possible.
+Also, I prefer not using a scheduler and typically lean towards at a static learning rate.
 """
 
 import torch.nn as nn
