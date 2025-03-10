@@ -1,6 +1,22 @@
 """
 Module: tiny.config
 Description: User defined model and pipeline configuration settings.
+
+This is a bit of a mess at the moment, but it's still a work in progress.
+Some configurations are set dynamically:
+
+- vocab_size
+- max_seq
+
+While others overlap:
+
+- eps
+- max_seq
+
+So, it's fine for now since it simplifies the general pipeline.
+
+Some parameters need to be overriden by the model state and are shared between
+the trainer and generator. These special parameters are "frozen" at runtime.
 """
 
 import logging
