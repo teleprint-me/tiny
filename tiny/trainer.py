@@ -133,3 +133,53 @@ class TinyTrainer:
                 x = torch.tensor(x)
             x = torch.clamp(x, min=0)
             return torch.exp(x).item()
+
+
+if __name__ == "__main__":
+    from tiny.args import TinyArgs
+
+    args = TinyArgs("Tiny Trainer CLI").parse_args("trainer")
+
+    config = TinyConfig(
+        # Device
+        seed=args.seed,
+        dname=args.dname,
+        dtype=torch.float32,
+        # Tokenizer
+        vocab_path=args.vocab_path,
+        pad=args.pad,
+        bos=args.bos,
+        eos=args.eos,
+        unk=args.unk,
+        add_bos=args.add_bos,
+        add_eos=args.add_eos,
+        vocab_size=149020,
+        # Dataset
+        dataset_path=args.dataset_path,
+        max_seq=args.max_seq,
+        batch_size=args.batch_size,
+        shuffle=args.shuffle,  # TODO: Not implemented
+        # Model
+        model_path=args.model_path,
+        d_model=args.d_model,
+        num_heads=args.num_heads,
+        eps=args.eps,
+        ff_mult=args.ff_mult,
+        num_layers=args.num_layers,
+        # Trainer
+        num_epochs=args.num_epochs,
+        save_every=args.save_every,
+        grad_accum_steps=args.grad_accum_steps,
+        # Optimizer
+        recurse=args.recurse,
+        lr=args.lr,
+        weight_decay=args.weight_decay,
+        amsgrad=args.amsgrad,
+        # Criterion
+        reduction=args.reduction,
+        # General
+        verbose=args.verbose,
+    )
+
+    trainer = TinyTrainer(config)
+    trainer.train()
