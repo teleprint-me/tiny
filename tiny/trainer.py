@@ -154,18 +154,18 @@ if __name__ == "__main__":
         add_bos=args.add_bos,
         add_eos=args.add_eos,
         vocab_size=149020,
-        # Dataset
-        dataset_path=args.dataset_path,
-        max_seq=args.max_seq,
-        batch_size=args.batch_size,
-        shuffle=args.shuffle,  # TODO: Not implemented
         # Model
         model_path=args.model_path,
+        max_seq=args.max_seq,
         d_model=args.d_model,
         num_heads=args.num_heads,
         eps=args.eps,
         ff_mult=args.ff_mult,
         num_layers=args.num_layers,
+        # Dataset
+        dataset_path=args.dataset_path,
+        batch_size=args.batch_size,
+        shuffle=args.shuffle,  # TODO: Not implemented
         # Trainer
         num_epochs=args.num_epochs,
         save_every=args.save_every,
