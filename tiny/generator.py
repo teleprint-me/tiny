@@ -84,21 +84,10 @@ if __name__ == "__main__":
         dtype=torch.float32,
         # Tokenizer
         vocab_path=args.vocab_path,
-        pad=args.pad_token,
-        bos=args.bos_token,
-        eos=args.eos_token,
-        unk=args.unk_token,
-        add_bos=args.add_bos,
-        add_eos=args.add_eos,
-        vocab_size=149020,
+        add_bos=args.add_bos,  # Frozen: To be decided
+        add_eos=args.add_eos,  # Frozen: To be decided
         # Model
         model_path=args.model_path,
-        max_seq=args.max_seq,
-        d_model=args.d_model,
-        num_heads=args.num_heads,
-        eps=args.eps,
-        ff_mult=args.ff_mult,
-        num_layers=args.num_layers,
         # Generator
         max_tokens=args.max_tokens,
         temperature=args.temperature,
