@@ -96,44 +96,44 @@ class TinyTrainer:
             if (epoch + 1) % self.config.save_every == 0:
                 self.state.save_model()
 
-        # === 🔥 Logging & Utilities === #
-        def log_parameters(self):
-            num_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
-            self.logger.info(f"Model has {num_params:,} learnable parameters.")
+    # === 🔥 Logging & Utilities === #
+    def log_parameters(self):
+        num_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        self.logger.info(f"Model has {num_params:,} learnable parameters.")
 
-        def log_batch(self, epoch: int, batch: int, loss: torch.Tensor):
-            """Logs loss & perplexity for each batch."""
-            self.logger.debug(
-                f"[Epoch: {epoch+1}/{self.config.num_epochs}] "
-                f"[Batch: {batch}/{len(self.dataset)}] "
-                f"[Loss: {loss.item():.6f}] "
-                f"[Perplexity: {self.perplexity(loss):.6f}]"
-            )
+    def log_batch(self, epoch: int, batch: int, loss: torch.Tensor):
+        """Logs loss & perplexity for each batch."""
+        self.logger.debug(
+            f"[Epoch: {epoch+1}/{self.config.num_epochs}] "
+            f"[Batch: {batch}/{len(self.dataset)}] "
+            f"[Loss: {loss.item():.6f}] "
+            f"[Perplexity: {self.perplexity(loss):.6f}]"
+        )
 
-        def log_epoch(self, epoch: int, total_loss: float):
-            """Logs total epoch loss, learning rate, and perplexity."""
-            average_loss = self.average_loss(total_loss)
-            lr = self.optimizer.param_groups[0]["lr"]
+    def log_epoch(self, epoch: int, total_loss: float):
+        """Logs total epoch loss, learning rate, and perplexity."""
+        average_loss = self.average_loss(total_loss)
+        lr = self.optimizer.param_groups[0]["lr"]
 
-            self.logger.info(
-                f"[Epoch: {epoch+1}/{self.config.num_epochs}] "
-                f"[Total Loss: {total_loss:.4f}] "
-                f"[Avg Loss: {average_loss:.4f}] "
-                f"[LR: {lr:.8f}] "
-                f"[Perplexity: {self.perplexity(average_loss):.6f}]"
-            )
+        self.logger.info(
+            f"[Epoch: {epoch+1}/{self.config.num_epochs}] "
+            f"[Total Loss: {total_loss:.4f}] "
+            f"[Avg Loss: {average_loss:.4f}] "
+            f"[LR: {lr:.8f}] "
+            f"[Perplexity: {self.perplexity(average_loss):.6f}]"
+        )
 
-        def average_loss(self, x: float | torch.Tensor) -> float:
-            if isinstance(x, torch.Tensor):
-                x = x.item()
-            return x / len(self.dataset)
+    def average_loss(self, x: float | torch.Tensor) -> float:
+        if isinstance(x, torch.Tensor):
+            x = x.item()
+        return x / len(self.dataset)
 
-        def perplexity(self, x: float | torch.Tensor) -> float:
-            """Computes perplexity, ensuring loss is non-negative."""
-            if isinstance(x, float):
-                x = torch.tensor(x)
-            x = torch.clamp(x, min=0)
-            return torch.exp(x).item()
+    def perplexity(self, x: float | torch.Tensor) -> float:
+        """Computes perplexity, ensuring loss is non-negative."""
+        if isinstance(x, float):
+            x = torch.tensor(x)
+        x = torch.clamp(x, min=0)
+        return torch.exp(x).item()
 
 
 if __name__ == "__main__":
@@ -150,10 +150,10 @@ if __name__ == "__main__":
         dtype=torch.float32,
         # Tokenizer
         vocab_path=args.vocab_path,
-        pad=args.pad,
-        bos=args.bos,
-        eos=args.eos,
-        unk=args.unk,
+        pad=args.pad_token,
+        bos=args.bos_token,
+        eos=args.eos_token,
+        unk=args.unk_token,
         add_bos=args.add_bos,
         add_eos=args.add_eos,
         vocab_size=149020,
