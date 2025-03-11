@@ -71,9 +71,14 @@ def extract_stories(text: str) -> list[str]:
 
 def preprocess_story_lines(story: str) -> list[str]:
     """
-    Process a story by ensuring that quotes remain intact and splitting at punctuation boundaries.
+    Process a story into a list of **clean, individual sentences**.
 
-    Returns a list of cleaned sentences with quotes preserved.
+    - Handles quotes properly.
+    - Ensures punctuation splits are correct.
+    - Removes any artifacts from bad splitting.
+
+    Returns:
+        list[str]: A properly segmented list of sentences.
     """
     sentences = []
     current_sentence = []
@@ -96,19 +101,19 @@ def preprocess_story_lines(story: str) -> list[str]:
                 for part in parts:
                     if part in ".!?":
                         current_sentence.append(part)
-                        sentences.append("".join(current_sentence).strip())  # Store full sentence
+                        sentences.append("".join(current_sentence).strip())  # Fix space issue
                         current_sentence = []  # Reset for new sentence
                     elif part:
                         current_sentence.append(part)
 
     if current_sentence:
-        sentences.append(" ".join(current_sentence).strip())  # Store remaining sentence
+        sentences.append("".join(current_sentence).strip())  # Store remaining sentence
 
     return sentences
 
 
 def preprocess_stories(stories: list[str]) -> list[list[str]]:
-    """Process each story to ensure sentences and quotes are correctly preserved."""
+    """Convert each story into a clean list of sentences."""
     return [preprocess_story_lines(story) for story in stories]
 
 
@@ -116,16 +121,32 @@ def generate_sentence_pairs(
     story_sentences: list[str], input_size: int = 2, target_size: int = 1
 ) -> list:
     """
-    Convert preprocessed story sentences into input-target pairs while maintaining quote integrity.
+    Convert preprocessed sentences into structured input-target pairs.
+
+    - Explicitly joins **exactly** `input_size` sentences in input.
+    - Ensures **exactly** `target_size` sentences in target.
+
+    Args:
+        story_sentences (list[str]): A preprocessed list of sentences.
+        input_size (int): Number of sentences per input.
+        target_size (int): Number of sentences per target.
+
+    Returns:
+        list: List of {"input": ..., "target": ...} pairs.
     """
     pairs = []
     i = 0
-    while i < len(story_sentences) - input_size - target_size:
-        input_sentences = " ".join(story_sentences[i : i + input_size])
-        target_sentences = " ".join(story_sentences[i + input_size : i + input_size + target_size])
+    while i <= len(story_sentences) - input_size - target_size:
+        input_sentences = " ".join(story_sentences[i : i + input_size]).strip()
+        target_sentences = " ".join(
+            story_sentences[i + input_size : i + input_size + target_size]
+        ).strip()
 
-        pairs.append({"input": input_sentences.strip(), "target": target_sentences.strip()})
-        i += 1
+        # Ensure strict enforcement of sizes
+        if input_sentences and target_sentences:
+            pairs.append({"input": input_sentences, "target": target_sentences})
+
+        i += 1  # Move sliding window
 
     return pairs
 
