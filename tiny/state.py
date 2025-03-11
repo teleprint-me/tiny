@@ -1,4 +1,5 @@
 """
+Copyright © 2023 Austin Berrio
 Module: tiny.state
 Description: A super simple implementation for tracking the model state.
 

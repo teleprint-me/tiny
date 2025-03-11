@@ -1,4 +1,5 @@
 """
+Copyright © 2023 Austin Berrio
 Module: tiny.trainer
 Description: A simple trainer for the Tiny Transformer model.
 

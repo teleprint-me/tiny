@@ -1,4 +1,5 @@
 """
+Copyright © 2023 Austin Berrio
 Module: tiny.dataset
 Description: Simple dataset wrapper for training.
 """

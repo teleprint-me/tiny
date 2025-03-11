@@ -1,4 +1,5 @@
 """
+Copyright © 2023 Austin Berrio
 Module: tiny.args
 Description: This modules manages the CLI parameters for TingConfig.
 """

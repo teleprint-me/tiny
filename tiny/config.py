@@ -1,4 +1,5 @@
 """
+Copyright © 2023 Austin Berrio
 Module: tiny.config
 Description: User defined model and pipeline configuration settings.
 

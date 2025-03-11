@@ -1,4 +1,5 @@
 """
+Copyright © 2023 Austin Berrio
 Script: tiny.hotpot
 Description: Downloads and converts the Hotpot QA to a simple a tiny format.
 
