@@ -109,7 +109,7 @@ class TinyTrainer:
         """Logs loss & perplexity for each batch."""
         self.logger.debug(
             f"[Epoch: {epoch+1}/{self.config.num_epochs}] "
-            f"[Batch: {batch}/{len(self.dataset)}] "
+            f"[Batch: {batch}/{len(self.dataset) // self.config.batch_size}] "
             f"[Loss: {loss.item():.6f}] "
             f"[Perplexity: {self.perplexity(loss):.6f}]"
         )
