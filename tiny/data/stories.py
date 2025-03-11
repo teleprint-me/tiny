@@ -27,18 +27,24 @@ nltk.download("punkt_tab")
 from nltk.tokenize import sent_tokenize
 
 
+def tqdm_bar_format() -> str:
+    """Customizes the progress indicator and removes the bar for a cleaner output."""
+    return "[{desc}: {percentage:3.0f}%] [{n_fmt}/{total_fmt}] [{rate_fmt}{postfix}] [{elapsed}]"
+
+
 def get_source_url(dataset_type: str) -> str:
     base_url = "https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/"
     return f"{base_url}TinyStories-{dataset_type}.txt?download=true"
 
 
 def download_dataset(source_url: str, source_path: Path) -> str:
-    """Download the dataset from the given URL and save it locally."""
+    """Downloads the dataset from the given URL and saves it locally."""
     response = requests.get(source_url, stream=True)
     response.raise_for_status()
 
-    total_size = int(response.headers.get("content-length", 0))
-    with tqdm(total=total_size, unit="B", unit_scale=True) as progress_bar:
+    total = int(response.headers.get("content-length", 0))
+    bar_format = tqdm_bar_format()
+    with tqdm(total=total, unit="B", unit_scale=True, bar_format=bar_format) as progress_bar:
         with open(source_path, "wb") as file:
             for data in response.iter_content(1024):
                 progress_bar.update(len(data))
@@ -53,20 +59,38 @@ def read_or_download_dataset(source_url: str, source_path: Path) -> str:
     if source_path.exists():
         print("Reading dataset...")
         with open(source_path, "r", encoding="utf-8") as file:
-            return file.read()
-    print("Downloading dataset...")
-    return download_dataset(source_url, source_path)
+            text = file.read()
+    else:
+        print("Downloading dataset...")
+        text = download_dataset(source_url, source_path)
+    return unicodedata.normalize("NFKC", text)  # Normalize Unicode
 
 
-def extract_stories(text: str) -> list:
+def extract_stories(text: str) -> list[str]:
     """Extract individual stories from raw text using <|endoftext|> as delimiter."""
     stories = text.split("<|endoftext|>")
     return [story.strip() for story in stories if story.strip()]
 
 
-def generate_sentence_pairs(story: str, input_size: int = 2, target_size: int = 1) -> list:
+def preprocess_stories(stories: list[str]) -> list[list[str]]:
+    """Return each story as a list of preprocessed sentences."""
+
+    def is_quote_open(text):
+        """Returns True if the sentence starts a quote without closing it."""
+        return text.count('"') % 2 == 1
+
+    preprocessed = []
+    for story in stories:
+        lines = []
+        for line in story.splitlines():
+            pass
+
+
+def generate_sentence_pairs(story: str, input_size: int = 2, target_size: int = 2) -> list:
     """
-    Convert a story into multi-sentence input-target pairs.
+    Convert a story into multi-sentence input-target pairs with:
+    - Proper handling of quotes (ensuring they don't get cut off).
+    - Unicode normalization for consistent encoding.
 
     Args:
         story (str): A single story in text format.
