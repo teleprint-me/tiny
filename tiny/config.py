@@ -112,6 +112,7 @@ class TinyConfig:
             torch.mps.empty_cache()
             self.dname = "mps"
         torch.set_default_dtype(self.dtype)
+        print(f"Using device {self.dname} with type {self.dtype}")
 
     def _set_seed(self) -> None:
         """Sets the random seed for reproducibility."""
