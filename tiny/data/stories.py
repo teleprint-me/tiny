@@ -1,6 +1,6 @@
 """
 Copyright © 2025 Austin Berrio
-Script: tiny.tinystories
+Script: tiny.data.stories
 Description: Downloads and converts Tiny Stories to a simple a tiny format.
 
 This script downloads and converts Tiny Stories data into a simplified format suitable for
