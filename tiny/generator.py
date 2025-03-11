@@ -17,6 +17,7 @@ class TinyGenerator:
     def __init__(self, config: TinyConfig):
         self.state = TinyState(config)
         self.state.load_model()
+        self.state.model.eval()
         self.logger = config.logger(self.__class__.__name__, config.verbose)
 
     # === 🔥 Convenience Properties === #
