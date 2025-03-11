@@ -1,7 +1,7 @@
 """
 Copyright © 2025 Austin Berrio
 Script: tiny.data.stories
-Description: Downloads and converts Tiny Stories to a simple a tiny format.
+Description: Downloads and converts Tiny Stories to a simple tiny format.
 
 This script downloads and converts Tiny Stories data into a simplified format suitable for
 training a small-scale model. The goal is to obtain around 100 random samples, where each
@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import random
+import unicodedata
 from pathlib import Path
 
 import nltk
@@ -63,23 +64,25 @@ def extract_stories(text: str) -> list:
     return [story.strip() for story in stories if story.strip()]
 
 
-def generate_sentence_pairs(story: str, min_words: int = 6, max_words: int = 15) -> list:
+def generate_sentence_pairs(story: str, input_size: int = 2, target_size: int = 1) -> list:
     """
-    Convert a story into input-target pairs, ensuring that:
-    - Each input starts at a full sentence.
-    - Targets start at the next complete sentence.
-    - Sentence pairs have a reasonable word range.
+    Convert a story into multi-sentence input-target pairs.
+
+    Args:
+        story (str): A single story in text format.
+        input_size (int): Number of sentences in the input sequence.
+        target_size (int): Number of sentences in the target sequence.
+
+    Returns:
+        list: List of {"input": ..., "target": ...} pairs.
     """
     sentences = sent_tokenize(story)
     pairs = []
 
-    for i in range(len(sentences) - 1):
-        input_sent = sentences[i].strip()
-        target_sent = sentences[i + 1].strip()
-
-        # Enforce word count constraints to avoid very short or long pairs
-        if min_words <= len(input_sent.split()) <= max_words:
-            pairs.append({"input": input_sent, "target": target_sent})
+    for i in range(len(sentences) - input_size - target_size):
+        input_sent = " ".join(sentences[i : i + input_size]).strip()
+        target_sent = " ".join(sentences[i + input_size : i + input_size + target_size]).strip()
+        pairs.append({"input": input_sent, "target": target_sent})
 
     return pairs
 
