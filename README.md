@@ -61,7 +61,7 @@ pip install -r requirements.txt
 Download the hotpot dataset:
 
 ```sh
-python -m tiny.hotpot --dataset dev \
+python -m tiny.data.hotpot --dataset dev \
     --samples 100 \
     --output data/hotpot.json
 ```
