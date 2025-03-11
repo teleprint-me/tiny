@@ -54,27 +54,43 @@ def read_or_download_dataset(source_url: str, source_path: Path) -> str:
     return download_dataset(source_url, source_path)
 
 
-def extract_sequence_pairs(text: str, seq_length: int, step: int) -> list:
+def extract_stories(text: str) -> list:
     """
-    Convert plaintext stories into input-target pairs using a sliding window.
+    Extract individual stories from raw text using the <|endoftext|> delimiter.
 
     Args:
-        text (str): Full text dataset.
-        seq_length (int): Length of input sequences.
-        step (int): Step size for the sliding window.
+        text (str): Raw dataset text.
 
     Returns:
-        list: List of {"input": ..., "target": ...} pairs.
+        list: List of stories as strings.
     """
-    pairs = []
-    words = text.split()  # Tokenizing at the word level
+    stories = text.split("<|endoftext|>")
+    return [story.strip() for story in stories if story.strip()]
+
+
+def generate_input_target_pairs(story: str, seq_length: int, scale: float) -> list:
+    """
+    Convert a story into input-target pairs with a tunable sliding window.
+
+    Args:
+        story (str): A single story.
+        seq_length (int): Number of words per input.
+        scale (float): Scale factor controlling step size (0.1 to 2.0).
+
+    Returns:
+        list: List of { "input": ..., "target": ... } pairs.
+    """
+    words = story.split()  # Simple whitespace tokenization
     num_words = len(words)
+
+    pairs = []
+    step = max(1, int(seq_length * scale))  # Ensure step is at least 1
 
     for i in range(0, num_words - seq_length, step):
         input_seq = " ".join(words[i : i + seq_length])
-        target_seq = " ".join(words[i + seq_length : i + seq_length + step])
+        target_seq = " ".join(words[i + seq_length : i + seq_length + seq_length])
 
-        if target_seq:  # Ensure we have a valid target
+        if target_seq:  # Ensure valid target exists
             pairs.append({"input": input_seq, "target": target_seq})
 
     return pairs
@@ -101,10 +117,10 @@ def parse_args():
         help="Length of input sequence in words (default: 10).",
     )
     parser.add_argument(
-        "--step",
-        type=int,
-        default=5,
-        help="Step size for sliding window (default: 5).",
+        "--scale",
+        type=float,
+        default=1.0,
+        help="Scaling factor for sliding window (range: 0.1 to 2.0, default: 1.0).",
     )
     parser.add_argument(
         "--output",
@@ -115,7 +131,7 @@ def parse_args():
 
 
 def main():
-    """Main function to download, process, and save a small subset of the dataset."""
+    """Main function to download, process, and save a subset of the dataset."""
     args = parse_args()
 
     source_url = get_source_url(args.dataset)
@@ -126,19 +142,25 @@ def main():
 
     data = read_or_download_dataset(source_url, source_path)
 
-    print("Extracting sequence pairs...")
-    completions = extract_sequence_pairs(data, args.seq_length, args.step)
+    print("Extracting stories...")
+    stories = extract_stories(data)
 
-    if not completions:
+    print(f"Found {len(stories)} stories. Generating input-target pairs...")
+    all_pairs = []
+
+    for story in stories:
+        all_pairs.extend(generate_input_target_pairs(story, args.seq_length, args.scale))
+
+    if not all_pairs:
         print("Error: No valid input-target pairs found.")
         return
 
-    if len(completions) < args.samples:
-        print(f"Warning: Only {len(completions)} pairs found, using all.")
-        sample = completions
+    if len(all_pairs) < args.samples:
+        print(f"Warning: Only {len(all_pairs)} pairs found, using all.")
+        sample = all_pairs
     else:
         print(f"Selecting {args.samples} random samples...")
-        sample = random.sample(completions, args.samples)
+        sample = random.sample(all_pairs, args.samples)
 
     print(f"Saving dataset to {destination_path}...")
     with open(destination_path, "w", encoding="utf-8") as f:
