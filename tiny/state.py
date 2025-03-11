@@ -12,7 +12,6 @@ Common parameters between training and inference are considered relevant paramet
 import torch
 
 from tiny.config import TinyConfig
-from tiny.dataset import TinyDataset
 from tiny.model import TinyTransformer
 from tiny.tokenizer import TinyTokenizer
 
@@ -23,17 +22,12 @@ class TinyState:
         self.logger = config.logger(self.__class__.__name__, config.verbose)
 
         self.tokenizer = None
-        self.dataset = None
         self.checkpoint = None
         self.model = None
 
     def load_tokenizer(self) -> None:
         self.tokenizer = TinyTokenizer(self.config)
         self.config.vocab_size = self.tokenizer.vocab_size
-
-    def load_dataset(self) -> None:
-        self.dataset = TinyDataset(self.config, self.tokenizer)
-        self.config.max_seq = self.dataset.config.max_seq
 
     def load_checkpoint(self) -> None:
         """Return the model state dict."""
@@ -49,7 +43,6 @@ class TinyState:
 
         # Load dependencies
         self.load_tokenizer()
-        self.load_dataset()
         self.load_checkpoint()
 
         # Override select parameters between runs

@@ -25,6 +25,9 @@ class TinyTrainer:
         self.state = TinyState(config)
         self.logger = config.logger(self.__class__.__name__, config.verbose)
 
+        self.dataset = TinyDataset(self.config, self.tokenizer)
+        self.state.config.max_seq = self.dataset.config.max_seq
+
     # === 🔥 Convenience Properties === #
     @property
     def config(self) -> TinyConfig:
@@ -33,10 +36,6 @@ class TinyTrainer:
     @property
     def tokenizer(self) -> TinyTokenizer:
         return self.state.tokenizer
-
-    @property
-    def dataset(self) -> TinyDataset:
-        return self.state.dataset
 
     @property
     def model(self) -> TinyTransformer:
@@ -79,7 +78,7 @@ class TinyTrainer:
             for batch, (x, y) in enumerate(self.dataset):
                 x, y = x.to(self.device), y.to(self.device)
                 logits = self.model(x)
-                loss = criterion(logits.view(-1, logits.size(-1), y.view(-1)))
+                loss = criterion(logits.view(-1, logits.size(-1)), y.view(-1))
                 loss = loss / self.config.grad_accum_steps
 
                 loss.backward()
@@ -93,7 +92,9 @@ class TinyTrainer:
 
             self.log_epoch(epoch, total_loss)
 
-            if (epoch + 1) % self.config.save_every == 0:
+            save_every = (epoch + 1) % self.config.save_every == 0
+            save_last = (epoch + 1) == self.config.num_epochs
+            if save_every or save_last:
                 self.state.save_model()
 
     # === 🔥 Logging & Utilities === #
