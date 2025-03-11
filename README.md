@@ -67,5 +67,5 @@ _Samples are selected at random._
 Train a model from scratch on a dataset:
 
 ```sh
-python -m tiny.trainer -dname cuda --vocab-path model/vocab.json --model-path model/tiny.pth --dataset-path data/hotpot.json --save-every 1
+python -m tiny.trainer --dname cuda --vocab-path model/vocab.json --model-path model/tiny.pth --dataset-path data/hotpot.json --save-every 1
 ```
