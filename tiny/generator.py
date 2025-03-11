@@ -41,19 +41,21 @@ class TinyGenerator:
         """Generates text from the given prompt with token streaming."""
 
         # Encode input sequence
-        input_ids = (
-            torch.tensor(self.tokenizer.encode(prompt), dtype=torch.long)
-            .unsqueeze(0)
-            .to(self.device)
-        )
+        encoded = self.tokenizer.encode(prompt, add_bos=args.add_bos)
+        input_ids = torch.tensor(encoded, dtype=torch.long).unsqueeze(0).to(self.device)
 
-        # Generate tokens iteratively
+        print(f"Encoded input: {input_ids.tolist()}")  # Debug: Check tokenized prompt
+
         for _ in range(self.config.max_tokens):
             logits = self.model(input_ids)  # Forward pass
             logits = logits[:, -1, :]  # Take last token logits
             probs = F.softmax(logits / self.config.temperature, dim=-1)
 
-            # Sample next token (Top-K or Greedy)
+            # Debugging: Print top 5 probabilities
+            top_probs, top_indices = torch.topk(probs, k=5, dim=-1)
+            print(f"Top predictions: {list(zip(top_indices.tolist()[0], top_probs.tolist()[0]))}")
+
+            # Sample next token (Greedy / Top-K / Multinomial)
             if self.config.greedy:
                 _, next_token = torch.topk(probs, k=1, dim=-1)
             else:
@@ -64,11 +66,13 @@ class TinyGenerator:
                 [input_ids, torch.tensor([[next_token]], device=self.device)], dim=1
             )
 
+            print(f"Generated token: {next_token} -> {self.tokenizer.decode([next_token])}")
+
             # Stop if we hit the EOS token
             if next_token == self.tokenizer.eos_id:
                 break
 
-            yield self.tokenizer.decode([next_token])  # Stream token immediately
+            yield self.tokenizer.decode([next_token])
 
 
 if __name__ == "__main__":
