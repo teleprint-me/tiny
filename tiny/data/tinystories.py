@@ -16,14 +16,18 @@ import argparse
 import json
 import os
 import random
+import re
 from pathlib import Path
 
+import nltk
 import requests
 from tqdm import tqdm
 
+nltk.download("punkt_tab")
+from nltk.tokenize import sent_tokenize
+
 
 def get_source_url(dataset_type: str) -> str:
-    """Get dataset URL based on type."""
     base_url = "https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/"
     return f"{base_url}TinyStories-{dataset_type}.txt?download=true"
 
@@ -55,43 +59,28 @@ def read_or_download_dataset(source_url: str, source_path: Path) -> str:
 
 
 def extract_stories(text: str) -> list:
-    """
-    Extract individual stories from raw text using the <|endoftext|> delimiter.
-
-    Args:
-        text (str): Raw dataset text.
-
-    Returns:
-        list: List of stories as strings.
-    """
+    """Extract individual stories from raw text using <|endoftext|> as delimiter."""
     stories = text.split("<|endoftext|>")
     return [story.strip() for story in stories if story.strip()]
 
 
-def generate_input_target_pairs(story: str, seq_length: int, scale: float) -> list:
+def generate_sentence_pairs(story: str, min_words: int = 6, max_words: int = 15) -> list:
     """
-    Convert a story into input-target pairs with a tunable sliding window.
-
-    Args:
-        story (str): A single story.
-        seq_length (int): Number of words per input.
-        scale (float): Scale factor controlling step size (0.1 to 2.0).
-
-    Returns:
-        list: List of { "input": ..., "target": ... } pairs.
+    Convert a story into input-target pairs, ensuring that:
+    - Each input starts at a full sentence.
+    - Targets start at the next complete sentence.
+    - Sentence pairs have a reasonable word range.
     """
-    words = story.split()  # Simple whitespace tokenization
-    num_words = len(words)
-
+    sentences = sent_tokenize(story)
     pairs = []
-    step = max(1, int(seq_length * scale))  # Ensure step is at least 1
 
-    for i in range(0, num_words - seq_length, step):
-        input_seq = " ".join(words[i : i + seq_length])
-        target_seq = " ".join(words[i + seq_length : i + seq_length + seq_length])
+    for i in range(len(sentences) - 1):
+        input_sent = sentences[i].strip()
+        target_sent = sentences[i + 1].strip()
 
-        if target_seq:  # Ensure valid target exists
-            pairs.append({"input": input_seq, "target": target_seq})
+        # Enforce word count constraints to avoid very short or long pairs
+        if min_words <= len(input_sent.split()) <= max_words:
+            pairs.append({"input": input_sent, "target": target_sent})
 
     return pairs
 
@@ -109,18 +98,6 @@ def parse_args():
         type=int,
         default=100,
         help="Number of samples to select (default: 100).",
-    )
-    parser.add_argument(
-        "--seq_length",
-        type=int,
-        default=10,
-        help="Length of input sequence in words (default: 10).",
-    )
-    parser.add_argument(
-        "--scale",
-        type=float,
-        default=1.0,
-        help="Scaling factor for sliding window (range: 0.1 to 2.0, default: 1.0).",
     )
     parser.add_argument(
         "--output",
@@ -149,7 +126,7 @@ def main():
     all_pairs = []
 
     for story in stories:
-        all_pairs.extend(generate_input_target_pairs(story, args.seq_length, args.scale))
+        all_pairs.extend(generate_sentence_pairs(story))
 
     if not all_pairs:
         print("Error: No valid input-target pairs found.")
