@@ -71,12 +71,12 @@ class MultiHeadSelfAttention(nn.Module):
         self.d_k = config.head_dim  # Per-head dimension
 
         # Linear projections for Q, K, V (each projects to d_model size)
-        self.wq = nn.Linear(config.d_model, config.d_model)
-        self.wk = nn.Linear(config.d_model, config.d_model)
-        self.wv = nn.Linear(config.d_model, config.d_model)
+        self.wq = nn.Linear(config.d_model, config.d_model, bias=False)
+        self.wk = nn.Linear(config.d_model, config.d_model, bias=False)
+        self.wv = nn.Linear(config.d_model, config.d_model, bias=False)
 
         # Final output projection
-        self.wo = nn.Linear(config.d_model, config.d_model)
+        self.wo = nn.Linear(config.d_model, config.d_model, bias=False)
 
         # Precompute causal mask
         self.register_buffer(
@@ -132,8 +132,8 @@ class FeedForward(nn.Module):
 
     def __init__(self, config: TinyConfig):
         super().__init__()
-        self.fc1 = nn.Linear(config.d_model, config.hidden_dim)
-        self.fc2 = nn.Linear(config.hidden_dim, config.d_model)
+        self.fc1 = nn.Linear(config.d_model, config.hidden_dim, bias=False)
+        self.fc2 = nn.Linear(config.hidden_dim, config.d_model, bias=False)
         self.act = nn.GELU(approximate="tanh")  # GPT-2 uses GELU
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -167,7 +167,7 @@ class TinyTransformer(nn.Module):
         self.embedding = PositionalEmbedding(config)
         self.blocks = nn.ModuleList([DecoderBlock(config) for _ in range(config.num_layers)])
         self.norm = LayerNormalization(config)
-        self.proj = nn.Linear(config.d_model, config.vocab_size)  # Final projection
+        self.proj = nn.Linear(config.d_model, config.vocab_size, bias=False)  # Final projection
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.embedding(x)
