@@ -117,6 +117,22 @@ def preprocess_stories(stories: list[str]) -> list[list[str]]:
     return [preprocess_story_lines(story) for story in stories]
 
 
+def clean_ascii(text: str) -> str:
+    """
+    Converts curly quotes and apostrophes to standard ASCII equivalents.
+    This ensures clean, consistent formatting across all environments.
+    """
+    replacements = {
+        "’": "'",  # Fancy apostrophe → ASCII apostrophe
+        "‘": "'",  # Single open quote → ASCII apostrophe
+        "”": '"',  # Fancy close double quote → ASCII double quote
+        "“": '"',  # Fancy open double quote → ASCII double quote
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text
+
+
 def generate_sentence_pairs(
     story_sentences: list[str], input_size: int = 2, target_size: int = 1
 ) -> list:
@@ -125,6 +141,7 @@ def generate_sentence_pairs(
 
     - Explicitly joins **exactly** `input_size` sentences in input.
     - Ensures **exactly** `target_size` sentences in target.
+    - Cleans text to **avoid unicode inconsistencies**.
 
     Args:
         story_sentences (list[str]): A preprocessed list of sentences.
@@ -142,7 +159,10 @@ def generate_sentence_pairs(
             story_sentences[i + input_size : i + input_size + target_size]
         ).strip()
 
-        # Ensure strict enforcement of sizes
+        # Ensure strict enforcement of sizes and clean ASCII
+        input_sentences = clean_ascii(input_sentences)
+        target_sentences = clean_ascii(target_sentences)
+
         if input_sentences and target_sentences:
             pairs.append({"input": input_sentences, "target": target_sentences})
 
