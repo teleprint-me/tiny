@@ -92,7 +92,7 @@ class TinyConfig:
         assert self.d_model % self.num_heads == 0, "d_model must be divisible by num_heads"
 
         self.head_dim = self.d_model // self.num_heads
-        self.scale = self.head_dim**-0.5
+        self.attn_scale = self.head_dim**-0.5
         self.hidden_dim = int(self.d_model * self.ff_mult)
 
         self._set_device()
