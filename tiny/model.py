@@ -1,5 +1,5 @@
 """
-Copyright © 2023 Austin Berrio
+Copyright © 2025 Austin Berrio
 Module: tiny.model
 Description: This module contains a simplified decoder-only Transformer model for natural language processing.
 

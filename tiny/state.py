@@ -1,5 +1,5 @@
 """
-Copyright © 2023 Austin Berrio
+Copyright © 2025 Austin Berrio
 Module: tiny.state
 Description: A super simple implementation for tracking the model state.
 

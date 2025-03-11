@@ -1,5 +1,5 @@
 """
-Copyright © 2023 Austin Berrio
+Copyright © 2025 Austin Berrio
 Package: tiny
 Description: A super simple transformer implementation.
 
