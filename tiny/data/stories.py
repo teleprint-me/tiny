@@ -186,16 +186,21 @@ def parse_args():
         help="Number of samples to select (default: 100).",
     )
     parser.add_argument(
+        "--all-pairs",
+        action="store_true",
+        help="Select all samples. Overrides --samples when True (Default: False).",
+    )
+    parser.add_argument(
         "--input-size",
         type=int,
         default=2,
-        help="Explicitly joins `input_size` sentences in input (Default: 2).",
+        help="Joins up to `input_size` sentences in input (Default: 2).",
     )
     parser.add_argument(
         "--target-size",
         type=int,
         default=1,
-        help="Explicitly joins `target_size` sentences in target (Default: 1).",
+        help="Joins up to `target_size` sentences in target (Default: 1).",
     )
     parser.add_argument(
         "--output",
@@ -228,9 +233,10 @@ def main():
     for story_sentences in processed_stories:
         sentence_pairs = generate_sentence_pairs(story_sentences, args.input_size, args.target_size)
         all_pairs.extend(sentence_pairs)
+    print(f"Generated {len(all_pairs)} samples.")
 
-    if len(all_pairs) < args.samples:
-        print(f"Warning: Only {len(all_pairs)} pairs found, using all.")
+    if args.all_pairs or len(all_pairs) < args.samples:
+        print(f"Warning: Using all {len(all_pairs)} pairs found.")
         sample = all_pairs
     else:
         print(f"Selecting {args.samples} random samples...")
