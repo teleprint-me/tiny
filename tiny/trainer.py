@@ -25,8 +25,9 @@ class TinyTrainer:
         self.state = TinyState(config)
         self.logger = config.logger(self.__class__.__name__, config.verbose)
 
-        self.dataset = TinyDataset(self.config, self.tokenizer)
-        self.state.config.max_seq = self.dataset.config.max_seq
+        self.dataset = None
+        self.optimizer = None
+        self.criterion = None
 
     # === 🔥 Convenience Properties === #
     @property
@@ -68,34 +69,36 @@ class TinyTrainer:
     def train(self) -> None:
         self.logger.info("Starting training...")
         self.state.load_model()
+        self.dataset = TinyDataset(self.config, self.tokenizer)
+        self.state.config.max_seq = self.dataset.config.max_seq
+        self.optimizer = self.create_optimizer()
+        self.criterion = self.create_criterion()
         self.log_parameters()
-
-        optimizer = self.create_optimizer()
-        criterion = self.create_criterion()
 
         for epoch in range(self.config.num_epochs):
             total_loss = 0
             for batch, (x, y) in enumerate(self.dataset):
                 x, y = x.to(self.device), y.to(self.device)
                 logits = self.model(x)
-                loss = criterion(logits.view(-1, logits.size(-1)), y.view(-1))
+                loss = self.criterion(logits.view(-1, logits.size(-1)), y.view(-1))
                 loss = loss / self.config.grad_accum_steps
 
                 loss.backward()
 
                 if (batch + 1) % self.config.grad_accum_steps == 0:
-                    optimizer.step()
-                    optimizer.zero_grad()
+                    self.optimizer.step()
+                    self.optimizer.zero_grad()
 
                 total_loss += loss.item() * self.config.grad_accum_steps
                 self.log_batch(epoch, batch, loss)
-
             self.log_epoch(epoch, total_loss)
 
             save_every = (epoch + 1) % self.config.save_every == 0
             save_last = (epoch + 1) == self.config.num_epochs
             if save_every or save_last:
                 self.state.save_model()
+
+        self.logger.info("Training complete!")
 
     # === 🔥 Logging & Utilities === #
     def log_parameters(self):
