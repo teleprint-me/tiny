@@ -125,12 +125,15 @@ class TinyConfig:
     def _frozen_params(self) -> set[str]:
         """Parameters that are stored in the model checkpoint."""
         return {
+            # Tokenizer
             "pad",
             "bos",
             "eos",
             "unk",
             "add_bos",
             "add_eos",
+            "vocab_size",
+            # Model
             "max_seq",
             "d_model",
             "num_heads",
