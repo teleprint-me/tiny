@@ -16,6 +16,8 @@ import argparse
 import json
 import os
 import random
+import re
+import string
 import unicodedata
 from pathlib import Path
 
@@ -72,41 +74,63 @@ def extract_stories(text: str) -> list[str]:
     return [story.strip() for story in stories if story.strip()]
 
 
+def preprocess_story_lines(story: str) -> list[str]:
+    """
+    Process a story by ensuring that quotes remain intact and splitting at punctuation boundaries.
+
+    Returns a list of cleaned sentences with quotes preserved.
+    """
+    sentences = []
+    current_sentence = []
+    open_quote = False  # Track if a quote is open
+
+    for line in story.splitlines():
+        line = line.strip()
+        if not line:
+            continue  # Skip empty lines
+
+        tokens = re.split(r'(["“”])', line)  # Split by quote characters while keeping them
+        for token in tokens:
+            if token in ('"', "“", "”"):
+                open_quote = not open_quote  # Toggle quote state
+                current_sentence.append(token)
+            elif open_quote:
+                current_sentence.append(token)  # Inside quote, don't break
+            else:
+                parts = re.split(r"([.!?])", token)  # Split by sentence-ending punctuation
+                for part in parts:
+                    if part in ".!?":
+                        current_sentence.append(part)
+                        sentences.append("".join(current_sentence).strip())  # Store full sentence
+                        current_sentence = []  # Reset for new sentence
+                    elif part:
+                        current_sentence.append(part)
+
+    if current_sentence:
+        sentences.append(" ".join(current_sentence).strip())  # Store remaining sentence
+
+    return sentences
+
+
 def preprocess_stories(stories: list[str]) -> list[list[str]]:
-    """Return each story as a list of preprocessed sentences."""
-
-    def is_quote_open(text):
-        """Returns True if the sentence starts a quote without closing it."""
-        return text.count('"') % 2 == 1
-
-    preprocessed = []
-    for story in stories:
-        lines = []
-        for line in story.splitlines():
-            pass
+    """Process each story to ensure sentences and quotes are correctly preserved."""
+    return [preprocess_story_lines(story) for story in stories]
 
 
-def generate_sentence_pairs(story: str, input_size: int = 2, target_size: int = 2) -> list:
+def generate_sentence_pairs(
+    story_sentences: list[str], input_size: int = 2, target_size: int = 1
+) -> list:
     """
-    Convert a story into multi-sentence input-target pairs with:
-    - Proper handling of quotes (ensuring they don't get cut off).
-    - Unicode normalization for consistent encoding.
-
-    Args:
-        story (str): A single story in text format.
-        input_size (int): Number of sentences in the input sequence.
-        target_size (int): Number of sentences in the target sequence.
-
-    Returns:
-        list: List of {"input": ..., "target": ...} pairs.
+    Convert preprocessed story sentences into input-target pairs while maintaining quote integrity.
     """
-    sentences = sent_tokenize(story)
     pairs = []
+    i = 0
+    while i < len(story_sentences) - input_size - target_size:
+        input_sentences = " ".join(story_sentences[i : i + input_size])
+        target_sentences = " ".join(story_sentences[i + input_size : i + input_size + target_size])
 
-    for i in range(len(sentences) - input_size - target_size):
-        input_sent = " ".join(sentences[i : i + input_size]).strip()
-        target_sent = " ".join(sentences[i + input_size : i + input_size + target_size]).strip()
-        pairs.append({"input": input_sent, "target": target_sent})
+        pairs.append({"input": input_sentences.strip(), "target": target_sentences.strip()})
+        i += 1
 
     return pairs
 
@@ -148,15 +172,13 @@ def main():
     print("Extracting stories...")
     stories = extract_stories(data)
 
-    print(f"Found {len(stories)} stories. Generating input-target pairs...")
+    print(f"Processing {len(stories)} stories...")
+    processed_stories = preprocess_stories(stories)
+
+    print("Generating input-target pairs...")
     all_pairs = []
-
-    for story in stories:
-        all_pairs.extend(generate_sentence_pairs(story))
-
-    if not all_pairs:
-        print("Error: No valid input-target pairs found.")
-        return
+    for story_sentences in processed_stories:
+        all_pairs.extend(generate_sentence_pairs(story_sentences))
 
     if len(all_pairs) < args.samples:
         print(f"Warning: Only {len(all_pairs)} pairs found, using all.")
