@@ -186,6 +186,18 @@ def parse_args():
         help="Number of samples to select (default: 100).",
     )
     parser.add_argument(
+        "--input-size",
+        type=int,
+        default=2,
+        help="Explicitly joins `input_size` sentences in input (Default: 2).",
+    )
+    parser.add_argument(
+        "--target-size",
+        type=int,
+        default=1,
+        help="Explicitly joins `target_size` sentences in target (Default: 1).",
+    )
+    parser.add_argument(
         "--output",
         default="data/tinystories.json",
         help="Path to write the output dataset (default: 'data/tinystories.json').",
@@ -214,7 +226,8 @@ def main():
     print("Generating input-target pairs...")
     all_pairs = []
     for story_sentences in processed_stories:
-        all_pairs.extend(generate_sentence_pairs(story_sentences))
+        sentence_pairs = generate_sentence_pairs(story_sentences, args.input_size, args.target_size)
+        all_pairs.extend(sentence_pairs)
 
     if len(all_pairs) < args.samples:
         print(f"Warning: Only {len(all_pairs)} pairs found, using all.")
