@@ -43,8 +43,8 @@ class TinyGenerator:
         # Encode input sequence
         encoded = self.tokenizer.encode(prompt, add_bos=args.add_bos)
         input_ids = torch.tensor(encoded, dtype=torch.long).unsqueeze(0).to(self.device)
-
-        print(f"Encoded input: {input_ids.tolist()}")  # Debug: Check tokenized prompt
+        # Debugging: Check tokenized prompt
+        print(f"Encoded input: {input_ids.tolist()}")
 
         for _ in range(self.config.max_tokens):
             logits = self.model(input_ids)  # Forward pass
@@ -66,6 +66,7 @@ class TinyGenerator:
                 [input_ids, torch.tensor([[next_token]], device=self.device)], dim=1
             )
 
+            # Debugging: Check generated token
             print(f"Generated token: {next_token} -> {self.tokenizer.decode([next_token])}")
 
             # Stop if we hit the EOS token
