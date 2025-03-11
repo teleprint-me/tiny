@@ -162,7 +162,7 @@ if __name__ == "__main__":
         print()
 
     config = TinyConfig(
-        vocab_path="data/vocab.json",
+        vocab_path="data/test_vocab.json",
         pad="<pad>",
         bos="<s>",
         eos="</s>",
