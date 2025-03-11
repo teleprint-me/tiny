@@ -17,16 +17,11 @@ import json
 import os
 import random
 import re
-import string
 import unicodedata
 from pathlib import Path
 
-import nltk
 import requests
 from tqdm import tqdm
-
-nltk.download("punkt_tab")
-from nltk.tokenize import sent_tokenize
 
 
 def tqdm_bar_format() -> str:
