@@ -1,4 +1,5 @@
-torchtext
-numpy
 requests
 tqdm
+numpy
+torchtext
+nltk
