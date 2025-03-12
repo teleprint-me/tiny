@@ -62,10 +62,14 @@ def calc_max_seq(dataset: List[Dict[str, str]], tokenizer) -> int:
         target = tokenizer.encode(pair["target"], add_eos=True)
         max_seq = max(len(source) + len(target), max_seq)
 
+    # Log the real maximum sequence length
+    logging.info(f"Calculated Maximum sequence length is {max_seq}")
+
     # Round up to nearest power of 2
     max_seq = 2 ** ((max_seq - 1).bit_length())
 
-    logging.info(f"Maximum sequence length set to {max_seq}")
+    # Log the recommended maximum sequence length
+    logging.info(f"Recommended maximum sequence length set to {max_seq}")
     return max_seq
 
 
