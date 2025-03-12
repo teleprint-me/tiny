@@ -213,8 +213,8 @@ def parse_args():
     )
     parser.add_argument(
         "--output",
-        default="data/tinystories.json",
-        help="Path to write the output dataset (default: 'data/tinystories.json').",
+        default="data/tinypairs.json",
+        help="Path to write the output dataset (default: 'data/tinypairs.json').",
     )
     return parser.parse_args()
 
