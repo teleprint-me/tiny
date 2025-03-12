@@ -16,7 +16,6 @@ import argparse
 import json
 import os
 import random
-import re
 import unicodedata
 from pathlib import Path
 
@@ -69,17 +68,46 @@ def extract_stories(text: str) -> list[str]:
     return [story.strip() for story in stories if story.strip()]
 
 
+def clean_ascii(text: str) -> str:
+    """
+    Converts curly quotes and apostrophes to standard ASCII equivalents.
+    This ensures clean, consistent formatting across all environments.
+    """
+    replacements = {
+        "’": "'",  # Fancy apostrophe → ASCII apostrophe
+        "‘": "'",  # Single open quote → ASCII apostrophe
+        "”": '"',  # Fancy close double quote → ASCII double quote
+        "“": '"',  # Fancy open double quote → ASCII double quote
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text
+
+
 def preprocess_story_lines(story: str) -> list[str]:
     """
     Process a story into a list of **clean, individual sentences**.
 
     - Handles quotes properly (keeps quotes with their attribution).
-    - Ensures punctuation splits are correct.
-    - Uses a **character-by-character approach** for more control.
+    - Uses an explicit set of **English sentence-terminal symbols**.
 
     Returns:
         list[str]: A properly segmented list of sentences.
     """
+    # Define English sentence-terminal symbols
+    TERMINALS = {
+        # Standard sentence punctuation
+        ".",
+        "!",
+        "?",
+        # Variants sometimes found in text
+        "‼",
+        "‽",
+        "⁇",
+        "⁈",
+        "⁉",
+    }
+
     sentences = []
     current_sentence = []
     quote_flag = False  # Track if inside a quoted sequence
@@ -89,6 +117,8 @@ def preprocess_story_lines(story: str) -> list[str]:
         if not line:
             continue  # Skip empty lines
 
+        line = clean_ascii(line)
+
         for i, char in enumerate(line):
             current_sentence.append(char)
 
@@ -96,16 +126,10 @@ def preprocess_story_lines(story: str) -> list[str]:
             if char in {'"', "“", "”"}:
                 quote_flag = not quote_flag
 
-            # Check if character is an end-of-sentence punctuation
-            elif char in {".", "!", "?"}:
-                # If we are inside a quote, don't end the sentence yet
+            # Check if character is a sentence-ending punctuation
+            elif char in TERMINALS:
                 if quote_flag:
-                    continue
-
-                # Otherwise, end the sentence properly
-                if i + 1 < len(line) and line[i + 1] == '"':
-                    current_sentence.append('"')  # Ensure punctuation stays inside quote
-                    quote_flag = not quote_flag  # Toggle flag
+                    continue  # Do not break if inside a quote
 
                 # Store the full sentence
                 sentences.append("".join(current_sentence).strip())
@@ -122,22 +146,6 @@ def preprocess_story_lines(story: str) -> list[str]:
 def preprocess_stories(stories: list[str]) -> list[list[str]]:
     """Convert each story into a clean list of sentences."""
     return [preprocess_story_lines(story) for story in stories]
-
-
-def clean_ascii(text: str) -> str:
-    """
-    Converts curly quotes and apostrophes to standard ASCII equivalents.
-    This ensures clean, consistent formatting across all environments.
-    """
-    replacements = {
-        "’": "'",  # Fancy apostrophe → ASCII apostrophe
-        "‘": "'",  # Single open quote → ASCII apostrophe
-        "”": '"',  # Fancy close double quote → ASCII double quote
-        "“": '"',  # Fancy open double quote → ASCII double quote
-    }
-    for old, new in replacements.items():
-        text = text.replace(old, new)
-    return text
 
 
 def generate_sentence_pairs(
@@ -159,26 +167,16 @@ def generate_sentence_pairs(
         list: List of {"input": ..., "target": ...} pairs.
     """
 
-    skipped = 0
     pairs = []
-    for i in range(0, len(story_sentences), input_size + target_size):
+    start = len(story_sentences)
+    step = input_size + target_size  # Prevents out-of-bounds errors
+    for i in range(0, start, step):
         input_sentences = " ".join(story_sentences[i : i + input_size]).strip()
-        target_sentences = " ".join(
-            story_sentences[i + input_size : i + input_size + target_size]
-        ).strip()
-
-        if 3 > len(input_sentences) or 3 > len(target_sentences):
-            skipped += 1
-            continue
-
-        # Ensure strict enforcement of sizes and clean ASCII
-        input_sentences = clean_ascii(input_sentences)
-        target_sentences = clean_ascii(target_sentences)
+        target_sentences = " ".join(story_sentences[i + input_size : i + step]).strip()
 
         if input_sentences and target_sentences:
             pairs.append({"input": input_sentences, "target": target_sentences})
 
-    print(f"Skipped {skipped} malformed input-target pairs.")
     return pairs
 
 
