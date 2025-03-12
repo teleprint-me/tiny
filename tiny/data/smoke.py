@@ -55,6 +55,8 @@ def validate_pairs(dataset: List[Dict[str, str]]) -> List[str]:
 
         if len(input_text) <= 3 or len(target_text) <= 3:
             warnings.append(f"Pair {idx}: Extremely short sequence detected.")
+            warnings.append(f"Input {idx}: {input_text}")
+            warnings.append(f"Target {idx}: {target_text}")
 
         if input_text[0] in TERMINALS:
             warnings.append(f"Pair {idx}: Input starts with a terminal symbol ({input_text[0]}).")
