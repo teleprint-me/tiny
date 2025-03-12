@@ -86,56 +86,46 @@ def clean_ascii(text: str) -> str:
 
 def preprocess_story_lines(story: str) -> list[str]:
     """
-    Process a story into a list of **clean, individual sentences**.
+    Process a story into a list of clean, individual sentences.
 
-    - Handles quotes properly (keeps quotes with their attribution).
-    - Uses an explicit set of **English sentence-terminal symbols**.
+    - Handles both single and double quotes properly.
+    - Processes **character-by-character** for maximum flexibility.
+    - Only splits sentences when **not inside a quote**.
+    - Ensures **clean sentence breaks** without concatenation issues.
 
     Returns:
         list[str]: A properly segmented list of sentences.
     """
     # Define English sentence-terminal symbols
-    TERMINALS = {
-        # Standard sentence punctuation
-        ".",
-        "!",
-        "?",
-        # Variants sometimes found in text
-        "‼",
-        "‽",
-        "⁇",
-        "⁈",
-        "⁉",
-    }
+    TERMINALS = {".", "!", "?", "‼", "‽", "⁇", "⁈", "⁉"}
 
     sentences = []
     current_sentence = []
-    quote_flag = False  # Track if inside a quoted sequence
+    quote_flag = False
+    single_quote_flag = False
 
     for line in story.splitlines():
-        line = line.strip()
+        line = clean_ascii(line).strip()
         if not line:
             continue  # Skip empty lines
-
-        line = clean_ascii(line)
 
         for i, char in enumerate(line):
             current_sentence.append(char)
 
-            # Toggle quote flag when encountering opening/closing quotes
-            if char in {'"', "“", "”"}:
-                quote_flag = not quote_flag
+            # Handle double quotes
+            if char == '"':
+                quote_flag = not quote_flag  # Toggle open/close state
 
-            # Check if character is a sentence-ending punctuation
-            elif char in TERMINALS:
-                if quote_flag:
-                    continue  # Do not break if inside a quote
+            # Handle single quotes (only if it's not part of a contraction)
+            elif char == "'" and (i == 0 or not line[i - 1].isalpha()):
+                single_quote_flag = not single_quote_flag
 
-                # Store the full sentence
+            # Only split sentences if we are NOT inside a quote
+            elif char in TERMINALS and not (quote_flag or single_quote_flag):
                 sentences.append("".join(current_sentence).strip())
-                current_sentence = []  # Reset
+                current_sentence = []
 
-        # Store any remaining text as a sentence
+        # Ensure the sentence is **fully stored before moving on**
         if current_sentence:
             sentences.append("".join(current_sentence).strip())
             current_sentence = []
