@@ -151,13 +151,18 @@ def generate_sentence_pairs(
     Returns:
         list: List of {"input": ..., "target": ...} pairs.
     """
+
+    skipped = 0
     pairs = []
-    i = 0
-    while i <= len(story_sentences) - input_size - target_size:
+    for i in range(0, len(story_sentences), input_size + target_size):
         input_sentences = " ".join(story_sentences[i : i + input_size]).strip()
         target_sentences = " ".join(
             story_sentences[i + input_size : i + input_size + target_size]
         ).strip()
+
+        if 3 > len(input_sentences) or 3 > len(target_sentences):
+            skipped += 1
+            continue
 
         # Ensure strict enforcement of sizes and clean ASCII
         input_sentences = clean_ascii(input_sentences)
@@ -166,8 +171,7 @@ def generate_sentence_pairs(
         if input_sentences and target_sentences:
             pairs.append({"input": input_sentences, "target": target_sentences})
 
-        i += 1  # Move sliding window
-
+    print(f"Skipped {skipped} malformed input-target pair")
     return pairs
 
 
