@@ -73,41 +73,48 @@ def preprocess_story_lines(story: str) -> list[str]:
     """
     Process a story into a list of **clean, individual sentences**.
 
-    - Handles quotes properly.
+    - Handles quotes properly (keeps quotes with their attribution).
     - Ensures punctuation splits are correct.
-    - Removes any artifacts from bad splitting.
+    - Uses a **character-by-character approach** for more control.
 
     Returns:
         list[str]: A properly segmented list of sentences.
     """
     sentences = []
     current_sentence = []
-    open_quote = False  # Track if a quote is open
+    quote_flag = False  # Track if inside a quoted sequence
 
     for line in story.splitlines():
         line = line.strip()
         if not line:
             continue  # Skip empty lines
 
-        tokens = re.split(r'(["“”])', line)  # Split by quote characters while keeping them
-        for token in tokens:
-            if token in ('"', "“", "”"):
-                open_quote = not open_quote  # Toggle quote state
-                current_sentence.append(token)
-            elif open_quote:
-                current_sentence.append(token)  # Inside quote, don't break
-            else:
-                parts = re.split(r"([.!?])", token)  # Split by sentence-ending punctuation
-                for part in parts:
-                    if part in ".!?":
-                        current_sentence.append(part)
-                        sentences.append("".join(current_sentence).strip())  # Fix space issue
-                        current_sentence = []  # Reset for new sentence
-                    elif part:
-                        current_sentence.append(part)
+        for i, char in enumerate(line):
+            current_sentence.append(char)
 
-    if current_sentence:
-        sentences.append("".join(current_sentence).strip())  # Store remaining sentence
+            # Toggle quote flag when encountering opening/closing quotes
+            if char in {'"', "“", "”"}:
+                quote_flag = not quote_flag
+
+            # Check if character is an end-of-sentence punctuation
+            elif char in {".", "!", "?"}:
+                # If we are inside a quote, don't end the sentence yet
+                if quote_flag:
+                    continue
+
+                # Otherwise, end the sentence properly
+                if i + 1 < len(line) and line[i + 1] == '"':
+                    current_sentence.append('"')  # Ensure punctuation stays inside quote
+                    quote_flag = not quote_flag  # Toggle flag
+
+                # Store the full sentence
+                sentences.append("".join(current_sentence).strip())
+                current_sentence = []  # Reset
+
+        # Store any remaining text as a sentence
+        if current_sentence:
+            sentences.append("".join(current_sentence).strip())
+            current_sentence = []
 
     return sentences
 
@@ -171,7 +178,7 @@ def generate_sentence_pairs(
         if input_sentences and target_sentences:
             pairs.append({"input": input_sentences, "target": target_sentences})
 
-    print(f"Skipped {skipped} malformed input-target pair")
+    print(f"Skipped {skipped} malformed input-target pairs.")
     return pairs
 
 
