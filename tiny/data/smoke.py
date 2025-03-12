@@ -14,9 +14,12 @@ It also computes the **maximum sequence length** across all input-target pairs.
 import argparse
 import json
 import logging
+import re
 from typing import Dict, List
 
 TERMINALS = {".", "!", "?", "‼", "‽", "⁇", "⁈", "⁉"}
+# Matches common contractions (e.g., "don't", "I'll", "it's")
+CONTRACTIONS = re.compile(r"\b(?:n't|'s|'re|'m|'ve|'d|'ll|'am|'em)\b", re.IGNORECASE)
 
 
 def load_dataset(filepath: str) -> List[Dict[str, str]]:
@@ -27,18 +30,51 @@ def load_dataset(filepath: str) -> List[Dict[str, str]]:
 
 def validate_enclosed_quotes(sequence: str) -> bool:
     """
-    Checks if a sequence has properly enclosed quotes.
+    Checks if a sequence has properly enclosed double and single quotes.
+
+    - Ignores apostrophes used in contractions and possessives.
+    - Ensures all opening quotes have closing counterparts.
+    - Handles single quotes used for emphasis within double quotes.
 
     Returns:
         True  → Quotes are properly paired.
         False → Unmatched/missing quote detected.
     """
-    quote_flag = False  # Track if inside a quoted sequence
-    for char in sequence:
-        if char in {'"', "“", "”"}:
+    quote_flag = False  # Tracks double quotes
+    single_quote_flag = False  # Tracks single quotes
+
+    i = 0
+    while i < len(sequence):
+        char = sequence[i]
+
+        # Handle double quotes
+        if char == '"':
             quote_flag = not quote_flag  # Toggle open/close state
 
-    return not quote_flag  # If True, all quotes are matched; False means unmatched quote found.
+        # Handle single quotes (only if it's not part of a contraction or possessive)
+        elif char == "'":
+            # If within a double-quoted section, treat as valid
+            if quote_flag:
+                pass  # Ignore single quotes inside double quotes
+            elif i > 0 and sequence[i - 1].isalpha():
+                match = CONTRACTIONS.match(sequence[i:])
+                if match:
+                    i += len(match.group()) - 1  # Skip over contraction
+                # If it's part of a possessive noun (e.g., John's)
+                elif i + 1 < len(sequence) and sequence[i + 1].isalpha():
+                    pass  # Ignore possessive apostrophe
+                # If it's a possessive apostrophe at the end of a word (e.g., "Jones'")
+                elif i + 1 < len(sequence) and sequence[i - 1].isalpha():
+                    pass  # Ignore possessives
+                else:
+                    single_quote_flag = not single_quote_flag  # Toggle open/close state
+            else:
+                single_quote_flag = not single_quote_flag  # Toggle open/close state
+
+        i += 1
+
+    # True = All quotes are matched; False = Unmatched quote(s) detected.
+    return not quote_flag and not single_quote_flag
 
 
 def validate_pairs(dataset: List[Dict[str, str]]) -> List[str]:
