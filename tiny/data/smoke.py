@@ -25,6 +25,22 @@ def load_dataset(filepath: str) -> List[Dict[str, str]]:
         return json.load(file)
 
 
+def validate_enclosed_quotes(sequence: str) -> bool:
+    """
+    Checks if a sequence has properly enclosed quotes.
+
+    Returns:
+        True  → Quotes are properly paired.
+        False → Unmatched/missing quote detected.
+    """
+    quote_flag = False  # Track if inside a quoted sequence
+    for char in sequence:
+        if char in {'"', "“", "”"}:
+            quote_flag = not quote_flag  # Toggle open/close state
+
+    return not quote_flag  # If True, all quotes are matched; False means unmatched quote found.
+
+
 def validate_pairs(dataset: List[Dict[str, str]]) -> List[str]:
     """
     Check dataset for common formatting discrepancies.
@@ -43,8 +59,19 @@ def validate_pairs(dataset: List[Dict[str, str]]) -> List[str]:
         if input_text[0] in TERMINALS:
             warnings.append(f"Pair {idx}: Input starts with a terminal symbol ({input_text[0]}).")
 
-        if input_text[-1] in {'"', "'"} or target_text[-1] in {'"', "'"}:
-            warnings.append(f"Pair {idx}: Sequence ends with a quote/apostrophe.")
+        if input_text[0] == "'" or target_text[0] == "'":
+            warnings.append(f"Pair {idx}: Sequence begins with an apostrophe.")
+            warnings.append(f"Input {idx}: {input_text}")
+            warnings.append(f"Target {idx}: {target_text}")
+
+        # Use validate_enclosed_quotes() for more accurate quote validation
+        if not validate_enclosed_quotes(input_text):
+            warnings.append(f"Pair {idx}: Input contains an unmatched quote.")
+            warnings.append(f"Input {idx}: {input_text}")
+
+        if not validate_enclosed_quotes(target_text):
+            warnings.append(f"Pair {idx}: Target contains an unmatched quote.")
+            warnings.append(f"Target {idx}: {target_text}")
 
     return warnings
 
