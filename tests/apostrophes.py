@@ -35,14 +35,16 @@ def test_apostrophes() -> list[tuple[str, bool]]:
         ("He said, 'Let's go!", True),  # ✅ Contraction detected
         ("She said, 'What's up?'", True),  # ✅ Contraction detected
         ('Tiny said, "Hello, world!"', False),  # ✅ No contraction
-        ("say 'hip hip hooray'.", False),  # ✅ Single-quoted word, NOT a contraction
-        ("\"The word is 'trophy'.\"", False),  # ✅ Single-quoted word, NOT a contraction
+        ("say 'hip hip hooray'.", False),  # ✅ Not a contraction or possessive
+        ("\"The word is 'trophy'.\"", False),  # ✅ Not a contraction or possessive
         ("'Unmatched single quote", False),  # ✅ Not a contraction
         ('"Unmatched double quote', False),  # ✅ Not a contraction
         ("'Hello", False),  # ✅ Not a contraction
         ("Hello'", False),  # ✅ Not a contraction
         ('She said, "Hello', False),  # ✅ No contraction
         ('She said, "Hello!"', False),  # ✅ No contraction
+        ("'tis the season", True),  # ✅ Single-letter contraction should match
+        ("'em for the win", True),  # ✅ Should match ('em = them)
     ]
 
 
