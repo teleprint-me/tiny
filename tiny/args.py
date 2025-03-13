@@ -7,6 +7,7 @@ Description: This modules manages the CLI parameters for TingConfig.
 from argparse import ArgumentParser, Namespace
 
 
+# TODO: Rename to TinyModelArgs for clarity
 class TinyArgs:
     def __init__(self, description: str = "Tiny CLI Tool"):
         self.parser = ArgumentParser(description=description)
