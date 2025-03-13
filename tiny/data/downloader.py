@@ -1,4 +1,5 @@
 """
+Copyright © 2025 Austin Berrio
 Module: tiny.data.downloader
 Description: Downloads a file from a given source url to a destinatation path.
 """
