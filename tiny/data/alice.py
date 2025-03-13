@@ -6,9 +6,9 @@ Gutenberg License and Terms are clear and all Gutenberg references must be strip
 output. Any reference to Gutenberg is trademarked. The actual, original, work is in the Public Domain.
 """
 
-import argparse
 from pathlib import Path
 
+from tiny.data.args import TinyDataArgs
 from tiny.data.downloader import TinyDownloader
 
 
@@ -26,65 +26,32 @@ def extract_corpus(text: str) -> str:
     start_idx = -1
     end_idx = -1
 
-    # Step 1: Locate the start of the book
+    # Locate the start of the book
     for i, line in enumerate(lines):
         if start_line == line.strip():
             start_idx = i + 2  # Skip the start marker and tag
             break  # Stop after the first match
 
-    # Step 2: Locate the only fully uppercase "THE END"
+    # Locate the only fully uppercase "THE END"
     for i, line in enumerate(lines):
         if end_line == line.strip():  # Exact match
             end_idx = i - 1  # Skip the end marker
             break  # Stop after the first uppercase occurrence
 
-    # Step 3: Trim the content
+    # Trim the content
     if start_idx != -1 and end_idx != -1:
         return "\n".join(lines[start_idx:end_idx]).strip()
 
     return text  # Return unmodified if markers aren't found
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Download and preprocess Alice in Wonderland.")
-    parser.add_argument(
-        "--samples",
-        type=int,
-        default=100,
-        help="Number of samples to select (default: 100).",
-    )
-    parser.add_argument(
-        "--all-pairs",
-        action="store_true",
-        help="Select all samples. Overrides --samples when True (Default: False).",
-    )
-    parser.add_argument(
-        "--input-size",
-        type=int,
-        default=2,
-        help="Joins up to `input_size` sentences in input (Default: 2).",
-    )
-    parser.add_argument(
-        "--target-size",
-        type=int,
-        default=1,
-        help="Joins up to `target_size` sentences in target (Default: 1).",
-    )
-    parser.add_argument(
-        "--output",
-        default="data",
-        help="Path to write the output dataset (default: 'data').",
-    )
-    return parser.parse_args()
-
-
 def main() -> None:
-    args = parse_args()
+    args = TinyDataArgs("Download and preprocess Alice in Wonderland.").parse_args()
 
-    root_path = Path(args.output)
-    root_path.mkdir(exist_ok=True)
-    source_path = root_path / "alice.txt"
-    target_path = root_path / "alice.json"
+    root_dir = Path(args.dir)
+    root_dir.mkdir(exist_ok=True)
+    source_path = root_dir / "alice.txt"
+    target_path = root_dir / "alice.json"
 
     text = TinyDownloader(get_source_url(), source_path).read_or_download("text")
     corpus = extract_corpus(text)
