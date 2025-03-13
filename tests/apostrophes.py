@@ -19,8 +19,8 @@ def has_apostrophes(line: str) -> bool:
         r"|\b\w+'s\b",  # ex: John's, cat's
         r"|\b\w+'(?=\s|[.,!?])",  # ex: James', foxes', followed by space or punctuation
     ]
-    contractions_pattern = re.compile("".join(patterns))
-    return bool(contractions_pattern.search(line))  # Returns True if found
+    apostrophes = re.compile("".join(patterns))
+    return bool(apostrophes.search(line))  # Returns True if found
 
 
 # 🚀 Test Cases
