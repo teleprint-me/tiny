@@ -4,17 +4,17 @@ Description: Downloads a file from a given source url to a destinatation path.
 """
 
 import json
-import pathlib
 import unicodedata
+from pathlib import Path
 
 import requests
-import tqdm
+from tqdm import tqdm
 
 
 class TinyDownloader:
     def __init__(self, source_url: str, destination_path: str):
         self.url = source_url
-        self.path = pathlib.Path(destination_path)
+        self.path = Path(destination_path)
         self.bar_format = (
             "[{desc}: {percentage:3.0f}%] "
             "[{n_fmt}/{total_fmt}] "
