@@ -1,33 +1,52 @@
 """
 Module: tiny.logger
-Description: A simple automated logger factory.
+Description: A simple automated logger factory. This module provides a class `TinyLogger` to
+easily create and configure logger instances for your Python applications.
+
+The `TinyLogger` class offers methods to create new loggers, set their handlers, and retrieve
+existing ones. The loggers are automatically configured with a specified level (DEBUG or INFO) based
+on a provided verbosity flag.
+
+By default, the logger will output formatted log messages to the console.
 """
 
-import logging
 import sys
-from logging import DEBUG, INFO, Logger
+from logging import DEBUG, INFO, Formatter, Logger, StreamHandler, getLogger
 
 
 class TinyLogger:
 
     @classmethod
     def new_logger(cls, cls_name: str, verbose: bool) -> Logger:
+        """
+        Create a new logger with a specified level (DEBUG or INFO) based on the provided verbosity flag.
+
+        :param cls_name: The name of the class that inherits from Logger.
+        :param verbose: A boolean indicating whether to enable verbose logging.
+        :return: Configured logger instance.
+        """
         level = DEBUG if verbose else INFO
-        logger = logging.getLogger(name=cls_name)
+        logger = getLogger(name=cls_name)
         logger.setLevel(level)
+        return logger
 
     @classmethod
     def set_handler(cls, logger: Logger):
+        """
+        Add a formatted StreamHandler to the logger if it doesn't already have any handlers.
+
+        The logger's formatted output will be displayed on the console.
+        """
         # Check if the logger has handlers to avoid adding duplicates
         if not logger.hasHandlers():
             fmt = "%(levelname)s:%(filename)s:%(lineno)d: %(message)s"
-            handler = logging.StreamHandler(stream=sys.stdout)
-            formatter = logging.Formatter(fmt=fmt)
+            handler = StreamHandler(stream=sys.stdout)
+            formatter = Formatter(fmt=fmt)
             handler.setFormatter(formatter)
             logger.addHandler(handler)
 
     @classmethod
-    def get_logger(cls, cls_name: str, verbose: bool) -> logging.Logger:
+    def get_logger(cls, cls_name: str, verbose: bool) -> Logger:
         """
         Initialize and return a Logger instance.
 
