@@ -84,7 +84,7 @@ class TinyDataDownloader:
     def download_list(
         self,
         source_list: list[dict[str, str]],
-        rate_limit: float = 0.0,  # Default to no enforced delay
+        rate_limit: float = 0.35,
         min_stagger: float = 0.01,
         max_stagger: float = 0.1,
     ) -> None:
