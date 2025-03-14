@@ -46,7 +46,11 @@ class TinyDataDownloader:
         )
 
     def download_file(
-        self, source_url: str, source_file: str, rate_limit: float = 0.0, position: int = None
+        self,
+        source_url: str,
+        source_file: str,
+        rate_limit: float = 0.0,
+        position: int = None,
     ) -> bool:
         """
         Downloads a file from a given URL and saves it locally.
