@@ -49,8 +49,6 @@ class TinyDataDownloader:
         Returns True if successful, False otherwise.
         """
 
-        # NOTE: tqdm might need to move to download_list().
-        # I don't know if this will work because this is novel to me.
         try:
             self.logger.debug(f"Downloading '{source_file}' from '{source_url}'.")
 
@@ -71,6 +69,7 @@ class TinyDataDownloader:
             self.logger.error(f"Failed to download '{source_file}' from '{source_url}': {e}")
             return False  # Failure
 
+    # IMPORTANT: https://stackoverflow.com/q/41920124/15147156
     def download_list(self, source_list: list[dict[str, str]], rate_limit: float = 0.35) -> None:
         """Downloads a listed set of source files from a set of source URLs using multiprocessing."""
         self.logger.info(f"Downloading list using a timeout of '{rate_limit}' seconds.")
@@ -108,16 +107,18 @@ class TinyDataDownloader:
     def read_file(self, source_file: str, file_type: str) -> any:
         """Read a supported file type into memory."""
 
+        if file_type not in {"text", "json", "parquet"}:
+            raise ValueError(f"Unsupported file type: {file_type}")
+
         self.logger.debug(f"Reading '{file_type}' for '{source_file}'.")
 
-        if file_type == "text":
-            return self.read_text(source_file)
-        elif file_type == "json":
-            return self.read_json(source_file)
-        elif file_type == "parquet":
-            return self.read_parquet(source_file)
+        read = {
+            "text": self.read_text,
+            "json": self.read_json,
+            "parquet": self.read_parquet,
+        }[file_type]
 
-        raise ValueError(f"Unsupported file type: {file_type}")
+        return read(source_file)
 
     def read_or_download(self, source_url: str, source_file: str, file_type: str = "text") -> any:
         """Read cached file type if available, otherwise download it."""
