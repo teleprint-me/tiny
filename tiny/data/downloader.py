@@ -84,25 +84,33 @@ class TinyDataDownloader:
     def download_list(
         self,
         source_list: list[dict[str, str]],
-        rate_limit: float = 0.35,
+        rate_limit: float = 0.0,  # Default to no enforced delay
         min_stagger: float = 0.01,
         max_stagger: float = 0.1,
     ) -> None:
         """Downloads a listed set of source files from a set of source URLs using multiprocessing."""
-        self.logger.info(f"Downloading list using a timeout of '{rate_limit}' seconds.")
 
-        # Don't create more processes than needed
+        random.shuffle(source_list)  # Reduce predictable access patterns
+
         num_workers = min(multiprocessing.cpu_count(), len(source_list))
-        # Stagger rate limiting to mitigate triggering rate limits and bot detection
+
+        # Compute final staggered delays
+        staggered_limits = [
+            round(rate_limit + random.uniform(min_stagger, max_stagger), 3) for _ in source_list
+        ]
+        self.logger.info(f"Downloading list with timeouts: {staggered_limits}")
+
+        # Assign delays dynamically
         sources = [
             (
-                src["url"],
-                src["file"],
-                rate_limit + random.uniform(min_stagger, max_stagger),
-                i,
+                source["url"],
+                source["file"],
+                staggered_limits[position],  # Use precomputed stagger
+                position,
             )
-            for i, src in enumerate(source_list)
+            for position, source in enumerate(source_list)
         ]
+
         with multiprocessing.Pool(processes=num_workers) as pool:
             results = pool.starmap(self.download_file, sources)
 
