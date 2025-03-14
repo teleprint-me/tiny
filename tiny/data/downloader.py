@@ -20,6 +20,7 @@ This keeps the code lean and clean as a result.
 import json
 import multiprocessing
 import os
+import random
 import sys
 import unicodedata
 from time import sleep
@@ -80,14 +81,28 @@ class TinyDataDownloader:
             return False  # Failure
 
     # IMPORTANT: https://stackoverflow.com/a/46398645/15147156
-    def download_list(self, source_list: list[dict[str, str]], rate_limit: float = 0.35) -> None:
+    def download_list(
+        self,
+        source_list: list[dict[str, str]],
+        rate_limit: float = 0.35,
+        min_stagger: float = 0.01,
+        max_stagger: float = 0.1,
+    ) -> None:
         """Downloads a listed set of source files from a set of source URLs using multiprocessing."""
         self.logger.info(f"Downloading list using a timeout of '{rate_limit}' seconds.")
 
         # Don't create more processes than needed
         num_workers = min(multiprocessing.cpu_count(), len(source_list))
-        sources = [(src["url"], src["file"], rate_limit, i) for i, src in enumerate(source_list)]
-
+        # Stagger rate limiting to mitigate triggering rate limits and bot detection
+        sources = [
+            (
+                src["url"],
+                src["file"],
+                rate_limit + random.uniform(min_stagger, max_stagger),
+                i,
+            )
+            for i, src in enumerate(source_list)
+        ]
         with multiprocessing.Pool(processes=num_workers) as pool:
             results = pool.starmap(self.download_file, sources)
 
