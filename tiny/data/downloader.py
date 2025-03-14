@@ -18,8 +18,10 @@ This keeps the code lean and clean as a result.
 """
 
 import json
+import multiprocessing
 import os
 import unicodedata
+from time import sleep
 
 import pandas as pd
 import requests
@@ -30,7 +32,7 @@ from tiny.logger import TinyLogger
 
 class TinyDataDownloader:
     def __init__(self, root_dir: str = "data", verbose: bool = False):
-        os.makedirs(os.path.dirname(root_dir), exist_ok=True)
+        os.makedirs(root_dir, exist_ok=True)
         self.dir = root_dir
         self.encoding = "utf-8"
         self.logger = TinyLogger.get_logger(self.__class__.__name__, verbose)
@@ -41,20 +43,49 @@ class TinyDataDownloader:
             "[{elapsed}]"
         )
 
-    def download(self, source_url: str, source_file: str) -> None:
-        """Downloads a file from a given URL and saves it locally."""
+    def download_file(self, source_url: str, source_file: str, rate_limit: float = 0.0) -> bool:
+        """
+        Downloads a file from a given URL and saves it locally.
+        Returns True if successful, False otherwise.
+        """
 
-        self.logger.info(f"Downloading '{source_file}' from '{source_url}'.")
+        # NOTE: tqdm might need to move to download_list().
+        # I don't know if this will work because this is novel to me.
+        try:
+            self.logger.debug(f"Downloading '{source_file}' from '{source_url}'.")
 
-        response = requests.get(source_url, stream=True, timeout=30)
-        response.raise_for_status()
+            response = requests.get(source_url, stream=True, timeout=30)
+            response.raise_for_status()
 
-        total = int(response.headers.get("content-length", 0))
-        with tqdm(total=total, unit="B", unit_scale=True, bar_format=self.bar_format) as pbar:
-            with open(source_file, "wb") as file:
-                for data in response.iter_content(1024):
-                    pbar.update(len(data))
-                    file.write(data)
+            total = int(response.headers.get("content-length", 0))
+            with tqdm(total=total, unit="B", unit_scale=True, bar_format=self.bar_format) as pbar:
+                os.makedirs(os.path.dirname(source_file), exist_ok=True)  # Ensure directory exists
+                with open(source_file, "wb") as file:
+                    for data in response.iter_content(1024):
+                        pbar.update(len(data))
+                        file.write(data)
+
+                sleep(rate_limit)
+                return True  # Success
+        except Exception as e:
+            self.logger.error(f"Failed to download '{source_file}' from '{source_url}': {e}")
+            return False  # Failure
+
+    def download_list(self, source_list: list[dict[str, str]], rate_limit: float = 0.35) -> None:
+        """Downloads a listed set of source files from a set of source URLs using multiprocessing."""
+        self.logger.info(f"Downloading list using a timeout of '{rate_limit}' seconds.")
+
+        # Don't create more processes than needed
+        num_workers = min(multiprocessing.cpu_count(), len(source_list))
+        sources = [(src["url"], src["file"], rate_limit) for src in source_list]
+
+        with multiprocessing.Pool(processes=num_workers) as pool:
+            results = pool.starmap(self.download_file, sources)
+
+        processed = sum(results)  # Count successful downloads
+        failed = len(results) - processed  # Count failed downloads
+
+        self.logger.info(f"Processed: {processed}, Failed: {failed}")
 
     def read_text(self, source_file: str) -> str:
         """Read and normalize a plaintext file to unicode utf-8."""
@@ -77,7 +108,7 @@ class TinyDataDownloader:
     def read_file(self, source_file: str, file_type: str) -> any:
         """Read a supported file type into memory."""
 
-        self.logger.info(f"Reading '{file_type}' for '{source_file}'.")
+        self.logger.debug(f"Reading '{file_type}' for '{source_file}'.")
 
         if file_type == "text":
             return self.read_text(source_file)
@@ -95,5 +126,5 @@ class TinyDataDownloader:
             return self.read_file(source_file, file_type)
 
         # Otherwise cache the path
-        self.download(source_url, source_file)
+        self.download_file(source_url, source_file)
         return self.read_file(source_file, file_type)
