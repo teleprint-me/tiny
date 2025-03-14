@@ -20,6 +20,7 @@ This keeps the code lean and clean as a result.
 import json
 import multiprocessing
 import os
+import sys
 import unicodedata
 from time import sleep
 
@@ -33,7 +34,7 @@ from tiny.logger import TinyLogger
 class TinyDataDownloader:
     def __init__(self, root_dir: str = "data", verbose: bool = False):
         os.makedirs(root_dir, exist_ok=True)
-        self.dir = root_dir
+        self.dir = str(root_dir)
         self.encoding = "utf-8"
         self.logger = TinyLogger.get_logger(self.__class__.__name__, verbose)
         self.bar_format = (
@@ -43,7 +44,9 @@ class TinyDataDownloader:
             "[{elapsed}]"
         )
 
-    def download_file(self, source_url: str, source_file: str, rate_limit: float = 0.0) -> bool:
+    def download_file(
+        self, source_url: str, source_file: str, rate_limit: float = 0.0, position: int = None
+    ) -> bool:
         """
         Downloads a file from a given URL and saves it locally.
         Returns True if successful, False otherwise.
@@ -52,31 +55,38 @@ class TinyDataDownloader:
         try:
             self.logger.debug(f"Downloading '{source_file}' from '{source_url}'.")
 
+            sleep(rate_limit)  # Be kind to servers!
             response = requests.get(source_url, stream=True, timeout=30)
             response.raise_for_status()
 
-            total = int(response.headers.get("content-length", 0))
-            with tqdm(total=total, unit="B", unit_scale=True, bar_format=self.bar_format) as pbar:
+            kwargs = {
+                "total": int(response.headers.get("content-length", 0)),
+                "unit": "B",
+                "unit_scale": True,
+                "position": position,
+                "bar_format": self.bar_format,
+                "disable": not sys.stdout.isatty(),
+            }
+            with tqdm(**kwargs) as pbar:
                 os.makedirs(os.path.dirname(source_file), exist_ok=True)  # Ensure directory exists
                 with open(source_file, "wb") as file:
                     for data in response.iter_content(1024):
                         pbar.update(len(data))
                         file.write(data)
 
-                sleep(rate_limit)
-                return True  # Success
+            return True  # Success
         except Exception as e:
             self.logger.error(f"Failed to download '{source_file}' from '{source_url}': {e}")
             return False  # Failure
 
-    # IMPORTANT: https://stackoverflow.com/q/41920124/15147156
+    # IMPORTANT: https://stackoverflow.com/a/46398645/15147156
     def download_list(self, source_list: list[dict[str, str]], rate_limit: float = 0.35) -> None:
         """Downloads a listed set of source files from a set of source URLs using multiprocessing."""
         self.logger.info(f"Downloading list using a timeout of '{rate_limit}' seconds.")
 
         # Don't create more processes than needed
         num_workers = min(multiprocessing.cpu_count(), len(source_list))
-        sources = [(src["url"], src["file"], rate_limit) for src in source_list]
+        sources = [(src["url"], src["file"], rate_limit, i) for i, src in enumerate(source_list)]
 
         with multiprocessing.Pool(processes=num_workers) as pool:
             results = pool.starmap(self.download_file, sources)
