@@ -21,37 +21,57 @@ from tiny.data.args import TinyDataArgs
 from tiny.data.downloader import TinyDataDownloader
 
 
-class TinyDataPath:
-    """Data structure for managing file paths."""
+# NOTE: Just keep this simple for now. At least until the parser is fully ironed out.
+# WARN: Due to the variety of datasets, this cannot be cleanly abstracted and generalized.
+class TinyStoriesPath:
+    """Manages TinyStories dataset paths and ensures dataset availability."""
 
-    def __init__(self, dir_path: str):
-        self.dir = Path(dir_path)
-        self.dir.mkdir(exist_ok=True)
+    def __init__(
+        self, dataset_name: str = "tinystories", root_dir: str = "data", verbose: bool = False
+    ):
+        """
+        Args:
+            dataset_name (str): The name of the dataset (default: 'tinystories').
+            root_dir (str): The root data directory (default: 'data').
+            verbose (bool): Enable verbose logging.
+        """
+        self.root_dir = Path(root_dir)
+        self.dataset_dir = self.root_dir / dataset_name
+        self.dataset_dir.mkdir(parents=True, exist_ok=True)
 
-    @property
-    def source_file(self) -> Path:
-        """Path to the source file."""
-        return self.dir / "stories.txt"
+        self.downloader = TinyDataDownloader(root_dir=self.dataset_dir, verbose=verbose)
 
-    @property
-    def training(self) -> Path:
-        """Path to the training dataset."""
-        return self.dir / "stories_train.json"
+        # NOTE: File references are asymmetrical, e.g. TinyStoriesV2-GPT4-train.txt
+        # NOTE: We are ONLY using the GPT-3.5 dataset for now.
+        self.source_file = self.dataset_dir / "TinyStories-train.txt"  # Input file (train)
+        self.training = self.dataset_dir / "TinyStories-train.json"  # Output file (train)
+        self.validation = self.dataset_dir / "TinyStories-valid.json"  # Output file (valid)
 
-    @property
-    def validation(self) -> Path:
-        """Path to the validation dataset."""
-        self.valid_path = self.dir / "stories_valid.json"
+    def source_url(self) -> str:
+        """Returns the URL for downloading the TinyStories GPT-3.5 dataset."""
+        base = "https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/{file}?download=true"
+        return base.format(file="TinyStories-train.txt")
 
-    def url(self, label: str) -> str:
-        """Source URL for Tiny Stories."""
-        base = "https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main"
-        return f"{base}/TinyStories-{label}.txt?download=true"
+    def read_or_download(self) -> str:
+        """Downloads the dataset if missing, then reads it."""
+        return self.downloader.read_or_download(self.source_url(), str(self.source_file), "text")
 
-    def save(self, label: str, data: any) -> None:
-        path = self.valid if label == "valid" else self.train
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+    def save(self, data: list[dict[str, str]], split: float = 0.8) -> None:
+        """
+        Splits and saves the dataset into training and validation JSON files.
+
+        Args:
+            data (list): The processed dataset (list of dicts with "input"/"target").
+            split (float): Percentage of data to use for training (default: 0.8).
+        """
+        split_idx = int(len(data) * split)  # Ensure integer index
+        train_data = data[:split_idx]  # First `split%` of data for training
+        valid_data = data[split_idx:]  # Remaining data for validation
+
+        with open(self.training, "w", encoding="utf-8") as file:
+            json.dump(train_data, file, indent=2, ensure_ascii=False)
+        with open(self.validation, "w", encoding="utf-8") as file:
+            json.dump(valid_data, file, indent=2, ensure_ascii=False)
 
 
 def extract_stories(text: str) -> list[str]:
@@ -162,11 +182,11 @@ def generate_sentence_pairs(
     """
 
     pairs = []
-    start = len(story_sentences)
     step = input_size + target_size  # Prevents out-of-bounds errors
-    for i in range(0, start, step):
-        input_sentences = " ".join(story_sentences[i : i + input_size]).strip()
-        target_sentences = " ".join(story_sentences[i + input_size : i + step]).strip()
+    for i in range(start=0, stop=len(story_sentences), step=step):
+        chunk = i + input_size  # slice sentences into chunks
+        input_sentences = " ".join(story_sentences[i:chunk]).strip()
+        target_sentences = " ".join(story_sentences[chunk : i + step]).strip()
 
         if input_sentences and target_sentences:
             pairs.append({"input": input_sentences, "target": target_sentences})
