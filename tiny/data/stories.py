@@ -199,13 +199,11 @@ def main():
     """Main function to download, process, and save a subset of the dataset."""
     args = TinyDataArgs("Download and pre-process Tiny Stories.").parse_args()
 
-    path = TinyDataPath(args.dir)
-    downloader = TinyDataDownloader(args.dir, args.verbose)
-
-    data = downloader.read_or_download(path.url, path.source, "text")
+    path = TinyStoriesPath(root_dir=args.dir, verbose=args.verbose)
+    text = path.read_or_download()
 
     print("Extracting stories...")
-    stories = extract_stories(data)
+    stories = extract_stories(text)
 
     print(f"Processing {len(stories)} stories...")
     processed_stories = preprocess_stories(stories)
@@ -219,15 +217,13 @@ def main():
 
     if args.all_pairs or len(all_pairs) < args.samples:
         print(f"Warning: Using all {len(all_pairs)} pairs found.")
-        sample = all_pairs
+        data = all_pairs
     else:
         print(f"Selecting {args.samples} random samples...")
-        sample = random.sample(all_pairs, args.samples)
+        data = random.sample(all_pairs, args.samples)
 
-    print(f"Saving dataset to {destination_path}...")
-    with open(destination_path, "w", encoding="utf-8") as f:
-        json.dump(sample, f, indent=2, ensure_ascii=False)
-
+    print(f"Saving dataset to {path.dataset_dir}...")
+    path.save(data, split=args.split)
     print("Done! Dataset saved.")
 
 
