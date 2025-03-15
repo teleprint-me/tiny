@@ -12,6 +12,17 @@ class TinyDataArgs:
         self.parser = ArgumentParser(description=description)
 
     def parse_args(self) -> Namespace:
+        # Keep this simple for now since the others aren't required at the moment.
+        # This can be fleshed out if more unique arguments arise on a per script basis.
+        self.common_args()
+        return self.parser.parse_args()
+
+    def common_args(self):
+        self.parser.add_argument(
+            "--verbose",
+            action="store_true",
+            help="Enable verbose logging output (Default: False).",
+        )
         self.parser.add_argument(
             "--samples",
             type=int,
@@ -46,4 +57,8 @@ class TinyDataArgs:
             default="data",
             help="Directory to write generated files to (default: 'data').",
         )
-        return self.parser.parse_args()
+        self.parser.add_argument(
+            "--dataset",
+            default="tinystories",
+            help="Dataset name (default: 'tinystories').",
+        )
