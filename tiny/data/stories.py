@@ -47,6 +47,7 @@ class TinyStoriesPath:
         self.training = self.dataset_dir / "TinyStories-train.json"  # Output file (train)
         self.validation = self.dataset_dir / "TinyStories-valid.json"  # Output file (valid)
 
+    @property
     def source_url(self) -> str:
         """Returns the URL for downloading the TinyStories GPT-3.5 dataset."""
         base = "https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/{file}?download=true"
@@ -54,7 +55,7 @@ class TinyStoriesPath:
 
     def read_or_download(self) -> str:
         """Downloads the dataset if missing, then reads it."""
-        return self.downloader.read_or_download(self.source_url(), str(self.source_file), "text")
+        return self.downloader.read_or_download(self.source_url, str(self.source_file), "text")
 
     def save(self, data: list[dict[str, str]], split: float = 0.8) -> None:
         """
