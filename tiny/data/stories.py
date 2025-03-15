@@ -12,6 +12,7 @@ I'm thinking line by line might be okay per short story. Take each line in pairs
 is the input and the second line is the target. Not sure yet. This is challenging.
 """
 
+import itertools
 import json
 import multiprocessing
 import random
@@ -184,7 +185,7 @@ def generate_sentence_pairs(
 
     pairs = []
     step = input_size + target_size  # Prevents out-of-bounds errors
-    for i in range(start=0, stop=len(story_sentences), step=step):
+    for i in range(0, len(story_sentences), step):
         chunk = i + input_size  # slice sentences into chunks
         input_sentences = " ".join(story_sentences[i:chunk]).strip()
         target_sentences = " ".join(story_sentences[chunk : i + step]).strip()
@@ -209,13 +210,21 @@ def main():
     processed_stories = preprocess_stories(stories)
 
     print("Generating input-target pairs...")
-    all_pairs = []
-    for story_sentences in processed_stories:
-        sentence_pairs = generate_sentence_pairs(story_sentences, args.input_size, args.target_size)
-        all_pairs.extend(sentence_pairs)
+
+    # Parallelize sentence pair generation
+    num_workers = min(multiprocessing.cpu_count(), len(processed_stories))
+    with multiprocessing.Pool(processes=num_workers) as pool:
+        all_pairs = pool.starmap(
+            generate_sentence_pairs,
+            [(story, args.input_size, args.target_size) for story in processed_stories],
+        )
+
+    # Efficiently flatten the list
+    all_pairs = list(itertools.chain.from_iterable(all_pairs))
+
     print(f"Generated {len(all_pairs)} samples.")
 
-    if args.all_pairs or len(all_pairs) < args.samples:
+    if args.all or len(all_pairs) < args.samples:
         print(f"Warning: Using all {len(all_pairs)} pairs found.")
         data = all_pairs
     else:
