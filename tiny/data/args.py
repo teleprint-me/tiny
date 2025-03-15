@@ -57,8 +57,3 @@ class TinyDataArgs:
             default="data",
             help="Directory to write generated files to (default: 'data').",
         )
-        self.parser.add_argument(
-            "--dataset",
-            default="tinystories",
-            help="Dataset name (default: 'tinystories').",
-        )
