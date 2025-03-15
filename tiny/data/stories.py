@@ -12,60 +12,58 @@ I'm thinking line by line might be okay per short story. Take each line in pairs
 is the input and the second line is the target. Not sure yet. This is challenging.
 """
 
-import argparse
 import json
-import os
+import multiprocessing
 import random
-import unicodedata
 from pathlib import Path
 
-import requests
-from tqdm import tqdm
+from tiny.data.args import TinyDataArgs
+from tiny.data.downloader import TinyDataDownloader
 
 
-def tqdm_bar_format() -> str:
-    """Customizes the progress indicator and removes the bar for a cleaner output."""
-    return "[{desc}: {percentage:3.0f}%] [{n_fmt}/{total_fmt}] [{rate_fmt}{postfix}] [{elapsed}]"
+class TinyDataPath:
+    """Data structure for managing file paths."""
 
+    def __init__(self, dir_path: str):
+        self.dir = Path(dir_path)
+        self.dir.mkdir(exist_ok=True)
 
-def get_source_url(dataset_type: str) -> str:
-    base_url = "https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/"
-    return f"{base_url}TinyStories-{dataset_type}.txt?download=true"
+    @property
+    def source_file(self) -> Path:
+        """Path to the source file."""
+        return self.dir / "stories.txt"
 
+    @property
+    def training(self) -> Path:
+        """Path to the training dataset."""
+        return self.dir / "stories_train.json"
 
-def download_dataset(source_url: str, source_path: Path) -> str:
-    """Downloads the dataset from the given URL and saves it locally."""
-    response = requests.get(source_url, stream=True)
-    response.raise_for_status()
+    @property
+    def validation(self) -> Path:
+        """Path to the validation dataset."""
+        self.valid_path = self.dir / "stories_valid.json"
 
-    total = int(response.headers.get("content-length", 0))
-    bar_format = tqdm_bar_format()
-    with tqdm(total=total, unit="B", unit_scale=True, bar_format=bar_format) as progress_bar:
-        with open(source_path, "wb") as file:
-            for data in response.iter_content(1024):
-                progress_bar.update(len(data))
-                file.write(data)
+    def url(self, label: str) -> str:
+        """Source URL for Tiny Stories."""
+        base = "https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main"
+        return f"{base}/TinyStories-{label}.txt?download=true"
 
-    with open(source_path, "r", encoding="utf-8") as file:
-        return file.read()
-
-
-def read_or_download_dataset(source_url: str, source_path: Path) -> str:
-    """Read cached dataset if available, otherwise download it."""
-    if source_path.exists():
-        print("Reading dataset...")
-        with open(source_path, "r", encoding="utf-8") as file:
-            text = file.read()
-    else:
-        print("Downloading dataset...")
-        text = download_dataset(source_url, source_path)
-    return unicodedata.normalize("NFKC", text)  # Normalize Unicode
+    def save(self, label: str, data: any) -> None:
+        path = self.valid if label == "valid" else self.train
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
 
 
 def extract_stories(text: str) -> list[str]:
     """Extract individual stories from raw text using <|endoftext|> as delimiter."""
+
     stories = text.split("<|endoftext|>")
-    return [story.strip() for story in stories if story.strip()]
+    num_workers = min(multiprocessing.cpu_count(), len(stories))  # Define after stories
+
+    with multiprocessing.Pool(processes=num_workers) as pool:
+        results = pool.map(str.strip, stories)  # Use map() since .strip() takes one arg
+
+    return results
 
 
 def clean_ascii(text: str) -> str:
@@ -134,8 +132,14 @@ def preprocess_story_lines(story: str) -> list[str]:
 
 
 def preprocess_stories(stories: list[str]) -> list[list[str]]:
-    """Convert each story into a clean list of sentences."""
-    return [preprocess_story_lines(story) for story in stories]
+    """Convert each story into a clean list of sentences using multiprocessing."""
+
+    num_workers = min(multiprocessing.cpu_count(), len(stories))
+
+    with multiprocessing.Pool(processes=num_workers) as pool:
+        results = pool.map(preprocess_story_lines, stories)
+
+    return results
 
 
 def generate_sentence_pairs(
@@ -170,56 +174,14 @@ def generate_sentence_pairs(
     return pairs
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Download and preprocess TinyStories dataset.")
-    parser.add_argument(
-        "--dataset",
-        choices=["valid", "train"],
-        default="valid",
-        help="Choose which dataset to download: 'valid' (default) or 'train'.",
-    )
-    parser.add_argument(
-        "--samples",
-        type=int,
-        default=100,
-        help="Number of samples to select (default: 100).",
-    )
-    parser.add_argument(
-        "--all-pairs",
-        action="store_true",
-        help="Select all samples. Overrides --samples when True (Default: False).",
-    )
-    parser.add_argument(
-        "--input-size",
-        type=int,
-        default=2,
-        help="Joins up to `input_size` sentences in input (Default: 2).",
-    )
-    parser.add_argument(
-        "--target-size",
-        type=int,
-        default=1,
-        help="Joins up to `target_size` sentences in target (Default: 1).",
-    )
-    parser.add_argument(
-        "--output",
-        default="data/tinypairs.json",
-        help="Path to write the output dataset (default: 'data/tinypairs.json').",
-    )
-    return parser.parse_args()
-
-
 def main():
     """Main function to download, process, and save a subset of the dataset."""
-    args = parse_args()
+    args = TinyDataArgs("Download and pre-process Tiny Stories.").parse_args()
 
-    source_url = get_source_url(args.dataset)
-    source_path = Path(f"data/tinystories_{args.dataset}.txt")
-    destination_path = Path(args.output)
+    path = TinyDataPath(args.dir)
+    downloader = TinyDataDownloader(args.dir, args.verbose)
 
-    os.makedirs(os.path.dirname(destination_path), exist_ok=True)
-
-    data = read_or_download_dataset(source_url, source_path)
+    data = downloader.read_or_download(path.url, path.source, "text")
 
     print("Extracting stories...")
     stories = extract_stories(data)
