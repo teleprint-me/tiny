@@ -11,9 +11,9 @@ Copyright © 2025 Austin Berrio
 - JSON save/load of the model
 
 Usage:
-  python -m byte.model -c samples/simple.md -m 15 -v
-  python -m byte.model --save my_bpe.json -c samples/simple.md -m 200
-  python -m byte.model --load my_bpe.json -v
+  python -m tiny.tokenizer -c samples/simple.md -m 15 -v
+  python -m tiny.tokenizer --save my_bpe.json -c samples/simple.md -m 200
+  python -m tiny.tokenizer --load my_bpe.json -v
 """
 
 import argparse
