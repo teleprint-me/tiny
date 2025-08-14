@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Optional
 
 
-class Vocab:
+class TinyVocab:
     @staticmethod
     def file(path: Optional[str] = None) -> str:
         """Read text from plain text file."""
@@ -69,18 +69,18 @@ class Vocab:
 
     @staticmethod
     def tokenize(text: str) -> dict[str, int]:
-        pre = Vocab.pre_tokenize(text)
-        freqs = Vocab.frequencies(pre)
-        return Vocab.symbols(freqs)
+        pre = TinyVocab.pre_tokenize(text)
+        freqs = TinyVocab.frequencies(pre)
+        return TinyVocab.symbols(freqs)
 
     @staticmethod
     def build(path: Optional[str] = None) -> dict[str, int]:
         """Build the initial vocabulary."""
-        text = Vocab.file(path)
-        return Vocab.tokenize(text)
+        text = TinyVocab.file(path)
+        return TinyVocab.tokenize(text)
 
 
-class Model:
+class TinyModel:
     @staticmethod
     def pairs(vocab: dict[str, int]) -> dict[tuple[str, str], int]:
         new_pairs = {}
@@ -124,7 +124,7 @@ class Model:
         return new_vocab
 
 
-class Tokenizer:
+class TinyTokenizer:
     def __init__(self, vocab: dict[str, int], special: Optional[dict[str, str]] = None):
         self.model = {
             "type": "BPE",
@@ -192,13 +192,13 @@ class Tokenizer:
         self.invalidate_cache()
         self.merges = []
         for i in range(num_merges):
-            pairs = Model.pairs(self.vocab)
+            pairs = TinyModel.pairs(self.vocab)
             if not pairs:
                 print(f"Exhausted all pairs at step {i}.")
                 break
-            best, freq = Model.best(pairs)
+            best, freq = TinyModel.best(pairs)
             self.merges.append(best)
-            self.vocab = Model.merges(self.vocab, best)
+            self.vocab = TinyModel.merges(self.vocab, best)
             print(f"[training] merge[{i}] ({best}, {freq})")
         print("[training] Completed.")
 
@@ -222,13 +222,13 @@ class Tokenizer:
 
     def dump(self) -> None:
         # Dump the model parts
-        print("Model:")
+        print("TinyModel:")
         model = self.model.copy()  # don't modify the original model!
         model["vocab_size"] = self.vocab_size
         model["num_merges"] = self.num_merges
         print(json.dumps(model, indent=2, ensure_ascii=False))
         # Dump the tokenizer
-        print(f"Tokenizer (size={len(self)}):")
+        print(f"TinyTokenizer (size={len(self)}):")
         view = {self.pretty(k): v for k, v in self.token_to_id.items()}
         for k, v in sorted(view.items(), key=lambda kv: kv[1]):  # sort by id, not token
             print(json.dumps(k), ":", v)
@@ -364,11 +364,11 @@ def main():
     tokenizer = None
     if args.load:
         # load model (vocab + merges) from disk
-        tokenizer = Tokenizer(vocab={})
+        tokenizer = TinyTokenizer(vocab={})
         tokenizer.load(args.load)
     else:
-        vocab = Vocab.build(args.corpus)
-        tokenizer = Tokenizer(vocab)
+        vocab = TinyVocab.build(args.corpus)
+        tokenizer = TinyTokenizer(vocab)
         tokenizer.train(args.merges)
 
     if args.save:
@@ -377,7 +377,7 @@ def main():
     if args.verbose:
         tokenizer.dump()
 
-    print(f"Tokenizer (size={len(tokenizer)})")
+    print(f"TinyTokenizer (size={len(tokenizer)})")
     print(f"Prompt: {args.prompt}")
     ids = tokenizer.encode(args.prompt, args.bos, args.eos)
     print(f"encoded: {ids}")
