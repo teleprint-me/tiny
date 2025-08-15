@@ -72,7 +72,7 @@ _(Defaults to CPU if unspecified.)_
 Download the raw text:
 
 ```sh
-python -m tiny.data.gutenberg
+python -m tiny.download --dir data
 ```
 
 ### Tokenizer Training
