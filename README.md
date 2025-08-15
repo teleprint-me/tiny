@@ -1,64 +1,75 @@
 # Tiny
 
-Tiny is a super simple Transformer implementation for debugging
-[Mini](https://github.com/teleprint-me/mini.git).
+Tiny is a super simple Transformer implementation.
 
 The Transformer model is actually rather simple in implementation. The
 complexity arises from the surrounding tooling and pipeline.
 
 Tiny is designed to simplify that pipeline down to its core fundementals.
 
-## **Installation & Setup**
+## Setup
 
-### **1. Clone the repository**
+### 1. Clone the repository
 
 ```sh
-git clone https://github.com/teleprint-me/mini.git
-cd mini
+git clone https://github.com/teleprint-me/tiny.git
+cd tiny
 ```
 
-### **2. Setup a virtual environment**
+### 2. Set up a virtual environment
 
 ```sh
-python3.12 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate
 ```
 
-### **3. Install dependencies**
+### 3. Install dependencies
 
-#### **Install PyTorch**
+#### Install requirements
 
-- **CUDA**
+```sh
+pip install -U pip
+pip install -r requirements.txt --upgrade
+```
+
+#### Install PyTorch
+
+- **CUDA (NVIDIA GPUs)**
 
 ```sh
 pip install torch
 ```
 
-_PyTorch defaults to CUDA._
+_PyTorch defaults to CUDA if available._
 
-- **CPU**
+- **ROCm (AMD GPUs)**
+
+```sh
+pip install torch --index-url https://download.pytorch.org/whl/rocm6.4
+```
+
+- **CPU only**
 
 ```sh
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
 
-- **ROCm**
+#### Automated Setup
+
+A convenience script (`requirements.sh`) is provided:
 
 ```sh
-pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/rocm6.2.4
+chmod +x requirements.sh
+./requirements.sh <cuda|rocm|cpu>
 ```
 
-#### **Install Requirements**
+_(Defaults to CPU if unspecified.)_
 
-```sh
-pip install -r requirements.txt
-```
+## Usage
 
-## **Usage**
+### Dataset Preparation
 
-### **Dataset Preparation**
-
-Download the hotpot dataset:
+Download a HotpotQA subset:
 
 ```sh
 python -m tiny.data.hotpot --dataset dev \
@@ -66,11 +77,20 @@ python -m tiny.data.hotpot --dataset dev \
     --output data/hotpot.json
 ```
 
-_Samples are selected at random._
+_Samples are random._
 
-### **Pre-training**
+### Tokenizer Training
 
-Train a model from scratch on a dataset:
+```sh
+python -m tiny.tokenizer --save tokenizer.json -c samples/ -m 20
+```
+
+_Expects plaintext input. Tokenizer API is evolving and may require retrofit to
+pipeline expectations._
+
+### Pre-training
+
+Train a model from scratch:
 
 ```sh
 python -m tiny.trainer --dname cuda \
