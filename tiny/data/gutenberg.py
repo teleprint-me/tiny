@@ -112,32 +112,31 @@ def main() -> None:
     path.mkdir(exist_ok=True)
 
     corpus = []
+    original_dir = path / "original"
+    stripped_dir = path / "stripped"
+    original_dir.mkdir(exist_ok=True)
+    stripped_dir.mkdir(exist_ok=True)
+
     for book in library:
         name = book["name"]
-        original = path / "original"
-        original.mkdir(exist_ok=True)
-        original_book = original / name
+        url = book["url"]
+        original_book = original_dir / name
 
-        # Skip books that already exist
+        # Download if not present
         if not original_book.exists():
             time.sleep(0.35)
-            url = book["url"]
             download_file(url, original_book)
 
-        # strip gutenberg text from the book
-        text = ""
-        with open(original_book, "r", encoding="utf-8") as f:
+        # Read, strip, and write cleaned file
+        with open(original_book, "r", encoding="utf-8", errors="replace") as f:
             text = extract_corpus(f.read())
 
-        if text:
-            print(f"Extracted {len(text)}")
-            # save the stripped book to disk
-            stripped = path / "stripped"
-            stripped_book = stripped / name
-            with open(stripped_book, "w", encoding="utf-8") as f:
-                f.write(text)
+        print(f"Extracted {len(text)} chars for {name}")
+        stripped_book = stripped_dir / name
+        with open(stripped_book, "w", encoding="utf-8") as f:
+            f.write(text)
 
-        # Collect and label text for pre-processing
+        # Collect for later pre-processing
         corpus.append({"name": name, "text": text})
 
 
