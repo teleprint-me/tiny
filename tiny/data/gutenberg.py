@@ -34,7 +34,7 @@ library = [
 
 
 def download_file(url: str, file: Path):
-    # download a single file from a URL to a local file
+    """Download a file from a URL to a local file, with simple progress bar."""
     response = requests.get(url, stream=True)
     response.raise_for_status()
     total_size = int(response.headers.get("Content-Length", 0))
@@ -113,28 +113,32 @@ def main() -> None:
 
     corpus = []
     for book in library:
+        name = book["name"]
+        original = path / "original"
+        original.mkdir(exist_ok=True)
+        original_book = original / name
+
         # Skip books that already exist
-        original = path / f"original-{book.get("name")}"
-        if not original.exists():
+        if not original_book.exists():
             time.sleep(0.35)
-            url = book.get("url")
-            if url is None:
-                print(f"Skipping book: {book.get('name')}")
-                continue
-            download_file(url, original)
+            url = book["url"]
+            download_file(url, original_book)
 
         # strip gutenberg text from the book
         text = ""
-        with open(original, "r", encoding="utf-8") as f:
+        with open(original_book, "r", encoding="utf-8") as f:
             text = extract_corpus(f.read())
 
-        # save the stripped book to disk
-        stripped = path / book.get("name")
-        with open(stripped, "w", encoding="utf-8") as f:
-            f.write(text)
+        if text:
+            print(f"Extracted {len(text)}")
+            # save the stripped book to disk
+            stripped = path / "stripped"
+            stripped_book = stripped / name
+            with open(stripped_book, "w", encoding="utf-8") as f:
+                f.write(text)
 
         # Collect and label text for pre-processing
-        corpus.append({"name": book.get("name"), "text": text})
+        corpus.append({"name": name, "text": text})
 
 
 if __name__ == "__main__":
