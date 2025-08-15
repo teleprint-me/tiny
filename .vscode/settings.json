@@ -26,7 +26,7 @@
     "editor.formatOnSave": true
   },
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
-  "python.languageServer": "Default",
+  "python.languageServer": "Jedi",
   "black-formatter.args": ["--line-length=100"],
   "[python]": {
     "editor.defaultFormatter": "ms-python.black-formatter",
