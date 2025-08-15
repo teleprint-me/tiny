@@ -67,30 +67,31 @@ _(Defaults to CPU if unspecified.)_
 
 ## Usage
 
-### Dataset Preparation
+### Download
 
-Download a HotpotQA subset:
+Download the raw text:
 
 ```sh
-python -m tiny.data.hotpot --dataset dev \
-    --samples 100 \
-    --output data/hotpot.json
+python -m tiny.data.gutenberg
 ```
-
-_Samples are random._
 
 ### Tokenizer Training
 
+Train the tokenizer on the raw text.
+
 ```sh
-python -m tiny.tokenizer --save tokenizer.json -c samples/ -m 20
+python -m tiny.tokenizer --merges 5000 --corpus data/stripped --save model/tokenizer.json
 ```
 
-_Expects plaintext input. Tokenizer API is evolving and may require retrofit to
-pipeline expectations._
+_Expects plaintext input._
+
+### Build the Dataset
+
+TODO
 
 ### Pre-training
 
-Train a model from scratch:
+Train the model from scratch:
 
 ```sh
 python -m tiny.trainer --dname cuda \
@@ -99,3 +100,5 @@ python -m tiny.trainer --dname cuda \
     --dataset-path data/hotpot.json \
     --save-every 1
 ```
+
+_In progress._
