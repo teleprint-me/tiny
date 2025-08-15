@@ -2,10 +2,6 @@
 Copyright © 2025 Austin Berrio
 Module: tiny.model
 Description: This module contains a simplified decoder-only Transformer model for natural language processing.
-
-This model avoids the use of dropout, which has been shown to negatively impact performance by randomly dropping
-a selected percentage of samples from the propagated sequence. This can result in stuttering and repetition issues.
-This model is inspired by Jamil's Transformer, Karpathy's GPT-2, and Meta's Llama architectures.
 """
 
 import math
@@ -114,17 +110,15 @@ class MultiHeadSelfAttention(nn.Module):
         return self.wo(y)
 
 
-class LayerNormalization(nn.Module):
+class RMSNorm(nn.Module):
     def __init__(self, config: TinyConfig):
         super().__init__()
         self.eps = config.eps
-        self.alpha = nn.Parameter(torch.ones(config.d_model))  # Learnable scale
-        self.bias = nn.Parameter(torch.zeros(config.d_model))  # Learnable bias
+        self.weight = nn.Parameter(torch.ones(config.d_model))
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        mean = x.mean(dim=-1, keepdim=True)
-        var = x.var(dim=-1, unbiased=False, keepdim=True)  # More stable than std
-        return self.alpha * (x - mean) / torch.sqrt(var + self.eps) + self.bias
+    def forward(self, x):
+        rms = x.pow(2).mean(dim=-1, keepdim=True).add(self.eps).rsqrt()
+        return self.weight * (x / rms)
 
 
 class FeedForward(nn.Module):
@@ -148,8 +142,8 @@ class DecoderBlock(nn.Module):
         self.attn = MultiHeadSelfAttention(config)
         self.ffn = FeedForward(config)
 
-        self.norm1 = LayerNormalization(config)
-        self.norm2 = LayerNormalization(config)
+        self.norm1 = RMSNorm(config)
+        self.norm2 = RMSNorm(config)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Self-attention + Residual + LayerNorm
@@ -165,12 +159,13 @@ class TinyTransformer(nn.Module):
     def __init__(self, config: TinyConfig):
         super().__init__()
         self.embedding = PositionalEmbedding(config)
+        self.dropout = nn.Dropout(config.dropout_rate)
         self.blocks = nn.ModuleList([DecoderBlock(config) for _ in range(config.num_layers)])
-        self.norm = LayerNormalization(config)
+        self.norm = RMSNorm(config)
         self.proj = nn.Linear(config.d_model, config.vocab_size, bias=False)  # Final projection
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.embedding(x)
+        x = self.dropout(self.embedding(x))
         for block in self.blocks:
             x = block(x)
         return self.proj(self.norm(x))  # Normalize and project to vocab size
