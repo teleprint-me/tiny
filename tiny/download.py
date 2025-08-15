@@ -1,6 +1,6 @@
 """
-Script: tiny.data.gutenberg
-Description: Download, pre-process, and convert Alice in Wonderland to JSON source-target pairs.
+Script: tiny.download
+Description: Download, pre-process, and convert Gutenberg text files to JSON source-target pairs.
 
 Gutenberg License and Terms are clear and all Gutenberg references must be stripped from the final
 output. Any reference to Gutenberg is trademarked. The actual, original, work is in the Public Domain.
