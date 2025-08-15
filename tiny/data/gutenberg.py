@@ -128,16 +128,20 @@ def main() -> None:
             download_file(url, original_book)
 
         # Read, strip, and write cleaned file
-        with open(original_book, "r", encoding="utf-8", errors="replace") as f:
-            text = extract_corpus(f.read())
-
-        print(f"Extracted {len(text)} chars for {name}")
+        text = ""
         stripped_book = stripped_dir / name
-        with open(stripped_book, "w", encoding="utf-8") as f:
-            f.write(text)
+        if not stripped_book.exists():
+            with open(original_book, "r", encoding="utf-8", errors="replace") as f:
+                text = extract_corpus(f.read())
+            with open(stripped_book, "w", encoding="utf-8") as f:
+                f.write(text)
+        else:
+            with open(stripped_book, "r", encoding="utf-8") as f:
+                text = f.read()
 
         # Collect for later pre-processing
         corpus.append({"name": name, "text": text})
+        print(f"Extracted {len(text)} chars for {name}")
 
 
 if __name__ == "__main__":
