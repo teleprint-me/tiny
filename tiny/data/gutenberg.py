@@ -6,37 +6,53 @@ Gutenberg License and Terms are clear and all Gutenberg references must be strip
 output. Any reference to Gutenberg is trademarked. The actual, original, work is in the Public Domain.
 """
 
+import argparse
+import sys
+import time
 from pathlib import Path
 
-from tiny.data.args import TinyDataArgs
-from tiny.data.downloader import TinyDataDownloader
+import requests
+
+library = [
+    {
+        "name": "The-Odyssey-Homer.txt",
+        "url": "https://www.gutenberg.org/cache/epub/1727/pg1727.txt",
+    },
+    {
+        "name": "Alice-in-Wonderland-Lewis-Carroll.txt",
+        "url": "https://www.gutenberg.org/cache/epub/11/pg11.txt",
+    },
+    {
+        "name": "The-Time-Machine-H-G-Wells.txt",
+        "url": "https://www.gutenberg.org/cache/epub/35/pg35.txt",
+    },
+    {
+        "name": "The-Count-of-Monte-Cristo-Alexandre-Dumas.txt",
+        "url": "https://www.gutenberg.org/cache/epub/1184/pg1184.txt",
+    },
+]
 
 
-class TinyDataPath:
-    """Data structure for managing file paths."""
+def download_file(url: str, file: Path):
+    # download a single file from a URL to a local file
+    response = requests.get(url, stream=True)
+    response.raise_for_status()
+    total_size = int(response.headers.get("Content-Length", 0))
+    downloaded_size = 0
+    last_print = -1  # So 0% will print
 
-    def __init__(self, dir_path: str):
-        self.dir = Path(dir_path)
-        self.dir.mkdir(exist_ok=True)
-
-    @property
-    def source(self) -> Path:
-        """Path to the source file."""
-        return self.dir / "alice.txt"
-
-    @property
-    def train(self) -> Path:
-        """Path to the training dataset."""
-        return self.dir / "alice_train.json"
-
-    @property
-    def valid(self) -> Path:
-        """Path to the validation dataset."""
-        self.valid_path = self.dir / "alice_valid.json"
-
-    def url(self) -> str:
-        """Cached plaintext file for Alice in Wonderland."""
-        return "https://www.gutenberg.org/cache/epub/11/pg11.txt"
+    print(f"[bytes] {total_size} [", end="")
+    with open(file, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            if chunk:
+                f.write(chunk)
+                downloaded_size += len(chunk)
+                percent = int((downloaded_size / total_size) * 100) if total_size else 0
+                if percent // 10 > last_print // 10:
+                    print("*", end="")
+                    sys.stdout.flush()
+                    last_print = percent
+    print(f"] [path] {file}")
 
 
 def extract_corpus(text: str) -> str:
@@ -79,15 +95,46 @@ def generate_pairs(sentences: list[str], input_size: int, target_size: int) -> l
     return pairs
 
 
-def main() -> None:
-    args = TinyDataArgs("Download and preprocess Alice in Wonderland.").parse_args("alice")
-    path = TinyDataPath(args.dir)
-    text = TinyDataDownloader(path.url, path.source).read_or_download("text")
-    corpus = extract_corpus(text)
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dir",
+        default="data",
+        help="Directory to write generated files to (default: 'data').",
+    )
+    return parser.parse_args()
 
-    # Debug output (verify correctness before proceeding to Step 2)
-    print("First 250 characters:")
-    print(corpus[:250])  # Preview the first 500 characters
+
+def main() -> None:
+    args = parse_args()
+
+    path = Path(args.dir)
+    path.mkdir(exist_ok=True)
+
+    corpus = []
+    for book in library:
+        # Skip books that already exist
+        original = path / f"original-{book.get("name")}"
+        if not original.exists():
+            time.sleep(0.35)
+            url = book.get("url")
+            if url is None:
+                print(f"Skipping book: {book.get('name')}")
+                continue
+            download_file(url, original)
+
+        # strip gutenberg text from the book
+        text = ""
+        with open(original, "r", encoding="utf-8") as f:
+            text = extract_corpus(f.read())
+
+        # save the stripped book to disk
+        stripped = path / book.get("name")
+        with open(stripped, "w", encoding="utf-8") as f:
+            f.write(text)
+
+        # Collect and label text for pre-processing
+        corpus.append({"name": book.get("name"), "text": text})
 
 
 if __name__ == "__main__":
